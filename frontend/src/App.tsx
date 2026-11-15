@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-type Task = { id: number; title: string };
+type Task = { id: number; title: string; completed: boolean };
 
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -10,6 +10,10 @@ export default function App() {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [statuses, setStatuses] = useState({ incomplete: true, complete: false });
+  const visibleTasks = tasks.filter((task) =>
+    task.completed ? statuses.complete : statuses.incomplete,
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -54,6 +58,25 @@ export default function App() {
     }
   }
 
+  async function toggleCompletion(task: Task) {
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: !task.completed }),
+      });
+      if (!response.ok) throw new Error();
+      const updated = (await response.json()) as Task;
+      setTasks((current) => current.map((item) => (item.id === task.id ? updated : item)));
+    } catch {
+      setError("保存に失敗しました。もう一度お試しください。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <main>
       <header>
@@ -89,13 +112,44 @@ export default function App() {
       <section aria-labelledby="list-heading" className="card">
         <div className="list-heading">
           <h2 id="list-heading">タスク一覧</h2>
-          <span>{tasks.length} 件</span>
+          <span>{visibleTasks.length} 件</span>
         </div>
-        {tasks.length === 0 ? (
-          <p className="empty">まだタスクはありません。</p>
+        <fieldset className="filters">
+          <legend>ステータス</legend>
+          <label>
+            <input
+              type="checkbox"
+              checked={statuses.incomplete}
+              onChange={() =>
+                setStatuses((current) =>
+                  current.incomplete && !current.complete
+                    ? current
+                    : { ...current, incomplete: !current.incomplete },
+                )
+              }
+            />
+            未完了
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={statuses.complete}
+              onChange={() =>
+                setStatuses((current) =>
+                  current.complete && !current.incomplete
+                    ? current
+                    : { ...current, complete: !current.complete },
+                )
+              }
+            />
+            完了
+          </label>
+        </fieldset>
+        {visibleTasks.length === 0 ? (
+          <p className="empty">表示するタスクはありません。</p>
         ) : (
           <ul>
-            {tasks.map((task) => (
+            {visibleTasks.map((task) => (
               <li key={task.id}>
                 {editing === task.id ? (
                   <form
@@ -120,7 +174,19 @@ export default function App() {
                   </form>
                 ) : (
                   <>
-                    <span>{task.title}</span>
+                    <div className="task-info">
+                      <label className="task-status">
+                        <input
+                          type="checkbox"
+                          checked={task.completed}
+                          disabled={busy}
+                          onChange={() => void toggleCompletion(task)}
+                          aria-label={`${task.title}を完了`}
+                        />
+                        {task.completed ? "完了" : "未完了"}
+                      </label>
+                      <span>{task.title}</span>
+                    </div>
                     <button
                       className="secondary"
                       type="button"
