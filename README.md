@@ -89,3 +89,7 @@ CodexとClaude Codeのhookは、編集操作の前後でGit管理対象と未追
 利用前に `npm ci` を実行してください。Codexではプロジェクトを信頼したうえで、CLIの `/hooks` またはアプリの「Review hooks」からhookの内容を確認して信頼する必要があります。Claude Codeではプロジェクトの `.claude/settings.json` を使います。設定の反映には新しいセッションが必要な場合があります。
 
 hookは対応するエージェントのツール操作で実行されます。hookが無効な場合や、対応していないツールや外部プロセスによる変更には適用されません。シェル操作は終了後に確認します。複数の変更が同時に走った場合、変更元を区別できないことがあります。確実に確認するときは `npm run format:check` を実行してください。hook自体は `npm run test:hooks` で検証できます。
+
+## 仕様とテスト
+
+[仕様とテストの一覧](tasks/index.html)から、各課題の仕様と対応するテストを確認できます。仕様や対応表を変更したときは `node tasks/build-index.mjs` でHTMLを更新します。
