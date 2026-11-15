@@ -298,3 +298,23 @@ test("完了タスクを一覧から削除すると再読み込み後も表示�
   await page.getByRole("checkbox", { name: "完了", exact: true }).check();
   await expect(page.getByText(title, { exact: true })).toHaveCount(0);
 });
+
+test("期限を設定して作成し、編集・解除した結果を再読み込み後も一覧に表示する", async ({ page }) => {
+  await page.goto("/");
+  const title = `期限 ${Date.now()}`;
+  await page.getByLabel("タイトル", { exact: true }).fill(title);
+  await page.getByLabel("期限（任意）").fill("2030-01-02");
+  await page.getByRole("button", { name: "追加" }).click();
+  const row = page.getByRole("listitem").filter({ hasText: title });
+  await expect(row).toContainText("2030-01-02");
+  await row.getByRole("button", { name: "編集" }).click();
+  await page.getByLabel("期限を編集").fill("2031-02-03");
+  await page.getByRole("button", { name: "保存" }).click();
+  await page.reload();
+  await expect(row).toContainText("2031-02-03");
+  await row.getByRole("button", { name: "編集" }).click();
+  await page.getByLabel("期限を編集").fill("");
+  await page.getByRole("button", { name: "保存" }).click();
+  await page.reload();
+  await expect(row).toContainText("期限: なし");
+});
