@@ -147,3 +147,84 @@ test("存在しないタスクへの更新で404が返ると保存エラーを�
   await expect(page.getByRole("alert")).toContainText("保存に失敗しました");
   await expect(completion).not.toBeChecked();
 });
+
+test("タイトル検索に入力すると大小文字を区別せず部分一致するタスクだけを表示し、消去すると一覧に戻る", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const first = `Search Alpha ${Date.now()}`;
+  const second = `Search Beta ${Date.now()}`;
+  await addTask(page, first);
+  await addTask(page, second);
+  const search = page.getByLabel("タイトルを検索");
+  await search.fill("  ALpHa  ");
+  await expect(page.getByText(first, { exact: true })).toBeVisible();
+  await expect(page.getByText(second, { exact: true })).toHaveCount(0);
+  await search.fill("no such matching task");
+  await expect(page.getByText("表示するタスクはありません。")).toBeVisible();
+  await search.fill("");
+  await expect(page.getByText(first, { exact: true })).toBeVisible();
+  await expect(page.getByText(second, { exact: true })).toBeVisible();
+});
+
+test("検索中にステータスを選択するとタイトルとステータスの両方に一致するタスクを表示する", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const first = `Combined active ${Date.now()}`;
+  const second = `Combined done ${Date.now()}`;
+  await addTask(page, first);
+  await addTask(page, second);
+  await page.getByRole("checkbox", { name: `${second}を完了`, exact: true }).click();
+  await page.getByLabel("タイトルを検索").fill("combined");
+  await expect(page.getByText(first, { exact: true })).toBeVisible();
+  await expect(page.getByText(second, { exact: true })).toHaveCount(0);
+  await page.getByRole("checkbox", { name: "完了", exact: true }).check();
+  await expect(page.getByText(second, { exact: true })).toBeVisible();
+  await page.getByRole("checkbox", { name: "未完了", exact: true }).uncheck();
+  await expect(page.getByText(first, { exact: true })).toHaveCount(0);
+  await expect(page.getByText(second, { exact: true })).toBeVisible();
+});
+
+test("検索中にタスクのタイトルを編集すると保存結果が現在の検索条件に反映される", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const title = `Editable search ${Date.now()}`;
+  await addTask(page, title);
+  await page.getByLabel("タイトルを検索").fill("editable");
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: title })
+    .getByRole("button", { name: "編集" })
+    .click();
+  await page.getByLabel("タイトルを編集").fill("Updated task");
+  await page.getByRole("button", { name: "保存" }).click();
+  await expect(page.getByText("Updated task", { exact: true })).toHaveCount(0);
+  await page.getByLabel("タイトルを検索").fill("updated");
+  await expect(page.getByText("Updated task", { exact: true })).toBeVisible();
+});
+
+test("検索中に再読み込みすると検索語が空になり保存済みタスクを一覧に表示する", async ({ page }) => {
+  await page.goto("/");
+  const title = `Reload search ${Date.now()}`;
+  await addTask(page, title);
+  await page.getByLabel("タイトルを検索").fill("no such matching task");
+  await expect(page.getByText(title, { exact: true })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByLabel("タイトルを検索")).toHaveValue("");
+  await expect(page.getByText(title, { exact: true })).toBeVisible();
+});
+
+test("検索中にタスクを追加し完了すると現在の検索とステータスの条件が一覧に反映される", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const title = `Search create ${Date.now()}`;
+  await page.getByLabel("タイトルを検索").fill("search create");
+  await addTask(page, title);
+  await page.getByRole("checkbox", { name: `${title}を完了`, exact: true }).click();
+  await expect(page.getByText(title, { exact: true })).toHaveCount(0);
+  await page.getByRole("checkbox", { name: "完了", exact: true }).check();
+  await expect(page.getByText(title, { exact: true })).toBeVisible();
+});

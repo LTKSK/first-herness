@@ -1,18 +1,22 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import { matchesTitle } from "./search";
 
 type Task = { id: number; title: string; completed: boolean };
 
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [title, setTitle] = useState("");
+  const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<number | null>(null);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [statuses, setStatuses] = useState({ incomplete: true, complete: false });
-  const visibleTasks = tasks.filter((task) =>
-    task.completed ? statuses.complete : statuses.incomplete,
+  const visibleTasks = tasks.filter(
+    (task) =>
+      (task.completed ? statuses.complete : statuses.incomplete) &&
+      matchesTitle(task.title, search),
   );
 
   useEffect(() => {
@@ -114,6 +118,13 @@ export default function App() {
           <h2 id="list-heading">タスク一覧</h2>
           <span>{visibleTasks.length} 件</span>
         </div>
+        <label htmlFor="search-title">タイトルを検索</label>
+        <input
+          id="search-title"
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
         <fieldset className="filters">
           <legend>ステータス</legend>
           <label>
