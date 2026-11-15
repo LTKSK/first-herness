@@ -13,7 +13,8 @@
     "format:check": "oxfmt --check .",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:hooks": "node --test tests/hooks/*.test.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.8",
