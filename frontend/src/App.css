@@ -123,3 +123,31 @@ li:last-child {
     flex-basis: 100%;
   }
 }
+
+.filters {
+  display: flex;
+  gap: 16px;
+  border: 0;
+  padding: 0;
+  margin: 0 0 16px;
+}
+.filters legend {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.filters label,
+.task-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.filters input,
+.task-status input {
+  flex: none;
+}
+.task-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
