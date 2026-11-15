@@ -35,7 +35,9 @@ const clips = await Promise.all(
     if (!video.path)
       return `<section class="panel"><h3>${esc(video.title)}</h3><p>動画は未取得です。</p></section>`;
     const path = resolve(dirname(input), video.path);
-    const mime = { ".webm": "video/webm", ".mp4": "video/mp4" }[extname(path).toLowerCase()];
+    const mime = { ".webm": "video/webm", ".mp4": "video/mp4" }[
+      extname(path).toLowerCase()
+    ];
     if (!mime) throw new Error(`Unsupported video format: ${path}`);
     const bytes = await readFile(path);
     return `<section class="panel"><h3>${esc(video.title)}</h3><video controls preload="metadata"><source src="data:${mime};base64,${bytes.toString("base64")}" type="${mime}"></video><p>${esc(video.description)}</p></section>`;
