@@ -6,5 +6,6 @@
   "targetId": "candidate-example-001",
   "findingIds": ["finding-example-001"],
   "summary": "テストを振る舞いごとに分割した例です。",
-  "reevaluationId": "eval-example-002"
+  "reevaluationId": null,
+  "fromTargetId": "candidate-example-001"
 }

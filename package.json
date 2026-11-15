@@ -11,10 +11,11 @@
     "lint": "oxlint",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "test": "node scripts/test-mysql.mjs vitest",
+    "test": "npm run test:viewer && node scripts/test-mysql.mjs vitest",
     "test:e2e": "node scripts/test-mysql.mjs playwright",
     "preview": "vite preview",
-    "test:hooks": "node --test tests/hooks/*.test.mjs"
+    "test:hooks": "node --test tests/hooks/*.test.mjs",
+    "test:viewer": "node --test tests/viewer/*.test.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.8",

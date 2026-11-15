@@ -2,9 +2,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve, join } from "node:path";
 const [resultArg, directoryArg] = process.argv.slice(2);
 if (!resultArg || !directoryArg)
-  throw new Error(
-    "Usage: node viewer/demo.mjs <evaluation result.json> <report directory>",
-  );
+  throw new Error("Usage: node viewer/demo.mjs <evaluation result.json> <report directory>");
 const source = JSON.parse(await readFile(resolve(resultArg), "utf8"));
 const directory = resolve(directoryArg);
 await mkdir(directory, { recursive: true });
@@ -41,8 +39,7 @@ const data = {
     {
       title: "仕様とチェックの注釈",
       path: "annotated.webm",
-      description:
-        "同じ操作に確認内容を表示します。動画は仕様の一部を示します。",
+      description: "同じ操作に確認内容を表示します。動画は仕様の一部を示します。",
     },
   ],
   requirements: [
@@ -50,9 +47,7 @@ const data = {
       id: "REQ-01",
       description: "期限を指定してタスクを作成し、一覧に表示する。",
       result: ui,
-      checks: [
-        check("作成後の一覧表示", "評価用画面テスト: evaluate-ui.mjs", ui),
-      ],
+      checks: [check("作成後の一覧表示", "評価用画面テスト: evaluate-ui.mjs", ui)],
     },
     {
       id: "REQ-02",
@@ -70,46 +65,25 @@ const data = {
       id: "REQ-03",
       description: "期限を解除し、再読み込み後も解除状態を保つ。",
       result: ui,
-      checks: [
-        check("解除して再読み込み", "評価用画面テスト: evaluate-ui.mjs", ui),
-      ],
+      checks: [check("解除して再読み込み", "評価用画面テスト: evaluate-ui.mjs", ui)],
     },
     {
       id: "REQ-04",
       description: "実在しない日付や形式の異なる期限をAPIが拒否する。",
       result: api,
-      checks: [
-        check(
-          "不正な日付と形式の境界値",
-          "評価用APIテスト: evaluate-api.mjs",
-          api,
-        ),
-      ],
+      checks: [check("不正な日付と形式の境界値", "評価用APIテスト: evaluate-api.mjs", api)],
     },
     {
       id: "REQ-05",
-      description:
-        "期限を省略した作成ではnullとし、省略した更新では期限を維持する。",
+      description: "期限を省略した作成ではnullとし、省略した更新では期限を維持する。",
       result: api,
-      checks: [
-        check(
-          "作成と更新における省略",
-          "評価用APIテスト: evaluate-api.mjs",
-          api,
-        ),
-      ],
+      checks: [check("作成と更新における省略", "評価用APIテスト: evaluate-api.mjs", api)],
     },
     {
       id: "REQ-06",
       description: "旧DBのタスクを保持し、API再起動後も期限を保持する。",
       result: api,
-      checks: [
-        check(
-          "旧DBの移行とAPI再起動",
-          "評価用APIテスト: evaluate-api.mjs",
-          api,
-        ),
-      ],
+      checks: [check("旧DBの移行とAPI再起動", "評価用APIテスト: evaluate-api.mjs", api)],
     },
     {
       id: "REQ-07",
@@ -129,11 +103,7 @@ const data = {
       description: "既存のタイトル・一覧・作成・更新の仕様を維持する。",
       result: "unknown",
       checks: [
-        check(
-          "既存動作の一部",
-          "tests/api/tasks.test.ts、tests/e2e/tasks.spec.ts",
-          status("test"),
-        ),
+        check("既存動作の一部", "tests/api/tasks.test.ts、tests/e2e/tasks.spec.ts", status("test")),
       ],
     },
   ],
@@ -170,8 +140,5 @@ const data = {
   ],
   revisions: [],
 };
-await writeFile(
-  join(directory, "report.json"),
-  JSON.stringify(data, null, 2) + "\n",
-);
+await writeFile(join(directory, "report.json"), JSON.stringify(data, null, 2) + "\n");
 console.log(`Prepared ${join(directory, "report.json")}`);

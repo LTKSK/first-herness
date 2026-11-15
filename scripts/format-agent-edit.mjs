@@ -1,13 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import {
-  readFileSync,
-  writeFileSync,
-  mkdirSync,
-  lstatSync,
-  unlinkSync,
-  writeSync,
-} from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, lstatSync, unlinkSync, writeSync } from "node:fs";
 import { resolve, relative, join, isAbsolute } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -37,14 +30,8 @@ if (git.status !== 0) {
 }
 const root = resolve(git.stdout.trim());
 const digest = (value) => createHash("sha256").update(value).digest("hex");
-const stateDir = join(
-  tmpdir(),
-  `agent-format-hook-${process.getuid?.() ?? "user"}`,
-);
-const stateFile = join(
-  stateDir,
-  `${digest(`${root}\0${event.tool_use_id}`)}.json`,
-);
+const stateDir = join(tmpdir(), `agent-format-hook-${process.getuid?.() ?? "user"}`);
+const stateFile = join(stateDir, `${digest(`${root}\0${event.tool_use_id}`)}.json`);
 
 function snapshot() {
   const listing = spawnSync(
@@ -53,9 +40,7 @@ function snapshot() {
     { cwd: root, encoding: "utf8", maxBuffer: 20 * 1024 * 1024 },
   );
   if (listing.status !== 0)
-    throw new Error(
-      `Unable to list files: ${listing.stderr || listing.error?.message}`,
-    );
+    throw new Error(`Unable to list files: ${listing.stderr || listing.error?.message}`);
   const files = {};
   for (const file of new Set(listing.stdout.split("\0").filter(Boolean))) {
     if (!/\.(?:ts|tsx)$/.test(file)) continue;
@@ -64,8 +49,7 @@ function snapshot() {
     if (!rel || rel.startsWith("..") || isAbsolute(rel)) continue;
     try {
       const info = lstatSync(path);
-      if (info.isFile() && !info.isSymbolicLink())
-        files[file] = digest(readFileSync(path));
+      if (info.isFile() && !info.isSymbolicLink()) files[file] = digest(readFileSync(path));
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }
@@ -82,17 +66,13 @@ try {
       contents = readFileSync(stateFile, "utf8");
     } catch (error) {
       if (error.code === "ENOENT")
-        throw new Error(
-          "Missing pre-edit snapshot; the file was not formatted",
-        );
+        throw new Error("Missing pre-edit snapshot; the file was not formatted");
       throw error;
     }
     unlinkSync(stateFile);
     const before = JSON.parse(contents);
     const after = snapshot();
-    const changed = Object.keys(after).filter(
-      (file) => before[file] !== after[file],
-    );
+    const changed = Object.keys(after).filter((file) => before[file] !== after[file]);
     if (changed.length) {
       const formatter = join(
         root,
@@ -113,9 +93,7 @@ try {
         JSON.stringify({
           hookSpecificOutput: {
             hookEventName:
-              event.hook_event_name === "PostToolUseFailure"
-                ? "PostToolUseFailure"
-                : "PostToolUse",
+              event.hook_event_name === "PostToolUseFailure" ? "PostToolUseFailure" : "PostToolUse",
             additionalContext: `Oxfmt formatted: ${changed.join(", ")}`,
           },
         }),
@@ -123,9 +101,6 @@ try {
     }
   }
 } catch (error) {
-  writeSync(
-    2,
-    `Format hook: ${error instanceof Error ? error.message : String(error)}\n`,
-  );
+  writeSync(2, `Format hook: ${error instanceof Error ? error.message : String(error)}\n`);
   process.exitCode = 2;
 }

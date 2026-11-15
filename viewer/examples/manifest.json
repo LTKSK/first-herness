@@ -1,0 +1,30 @@
+{
+  "formatVersion": 1,
+  "title": "架空の検索機能",
+  "summary": "レポート形式を説明する架空の例です。",
+  "baseline": "baseline-example-001",
+  "candidate": "candidate-example-001",
+  "videos": [
+    {
+      "title": "機能の操作",
+      "reason": "架空の例のため撮影していません。",
+      "kind": "feature"
+    },
+    {
+      "title": "仕様とチェックの注釈",
+      "reason": "架空の例のため撮影していません。",
+      "kind": "annotated"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "AC-01",
+      "description": "検索語に一致するタスクを表示する。",
+      "result": "unknown",
+      "checks": []
+    }
+  ],
+  "evaluationFiles": ["evaluation.json"],
+  "revisionFiles": ["revision.json"],
+  "candidateVersions": ["candidate-example-001"]
+}

@@ -1,19 +1,32 @@
-# 評価レポートの試作
+# レビュー用HTML
 
-期限追加の候補をPlaywrightで操作し、操作動画と注釈付き動画を作ります。評価結果と仕様・チェックの対応をJSONで用意し、動画を埋め込んだHTMLを生成します。形式は [FORMAT.md](FORMAT.md) を参照してください。
+タスクごとの仕様とテスト結果、別々に記録した評価と修正、動画から単一HTMLを作ります。詳細な入力形式は [FORMAT.md](FORMAT.md) を参照してください。サンプルは架空の結果です。
 
-## 実行
+## レポートを生成する
 
-Node.jsとnpmのほかに、候補のチェックアウトと、候補を対象に実行した評価結果が必要です。プロジェクトと候補の両方で `npm ci` を実行してください。PlaywrightのChromiumがなければ、プロジェクトのルートで `npx playwright install chromium` を実行します。
-
-以下は期限追加の候補を使う例です。`<候補のworktree>` は候補差分を適用したチェックアウトの絶対パスに置き換えてください。動画と評価結果の対象が一致することを確認してください。
+リポジトリのルートで、入力ファイルを用意して実行します。`viewer/examples/manifest.json` と評価・修正の例を出発点にできます。
 
 ```sh
-node viewer/record.mjs <候補のworktree> .harness/viewer-demo
-node viewer/demo.mjs .harness/evaluations/calibration/reference-final/result.json .harness/viewer-demo
-node viewer/build.mjs .harness/viewer-demo/report.json .harness/viewer-demo/index.html
+node viewer/prepare.mjs <manifest.json> <report.json>
+node viewer/build.mjs <report.json> <index.html>
 ```
 
-生成された `index.html` は動画を含む単一ファイルです。`.harness/` はGit管理外です。`demo.mjs` は期限追加の評価結果に合わせたデモ用の変換です。仕様とテストの対応を汎用的に抽出する機能ではありません。
+仕様と実際のテストケース、その結果は実行結果を確認して記録します。成功とする条件のテストが足りない場合は未確認にします。`candidateVersions` に修正前後の候補IDを列挙します。評価・修正と指摘・再評価の対象が一致しない場合は生成に失敗します。動画のパスはmanifestからの相対パスです。未取得の場合は理由を記録します。
 
-評価と修正を別ファイルに保存する形式は草案です。現在のビューアーは、それらを直接読み込まず、表示用の `report.json` を読み込みます。動画は実際のブラウザー操作を示しますが、動画だけで全仕様を確認するものではありません。
+## 動画を撮影する
+
+候補のコミット済みworktreeを指定し、タスク固有の操作シナリオを使います。`start({checkout})` は対象候補の環境を起動し、`url` と非同期の `stop` を返します。`run({page, note, annotated})` はPlaywrightで操作し、注釈を `note` で記録します。同じシナリオを通常版と注釈付きで実行します。撮影前にPlaywrightのChromiumをインストールしてください。
+
+```sh
+node viewer/record-scenario.mjs <候補worktree> <scenario.mjs> <出力ディレクトリ>
+```
+
+候補はクリーンなコミットで指定します。出力ディレクトリには存在しない名前を指定し、親ディレクトリは事前に作成してください。生成される `videos.json` の候補IDと動画のパスをmanifestに転記します。生成器は候補IDを比較しますが、シナリオが実際にその候補を起動したかまでは検証できません。操作と環境を確認してください。動画だけで全仕様の網羅性は保証できません。
+
+`examples/title-search-scenario.mjs` はMySQLのテスト用DBを使う例です。候補で `npm ci` を実行し、専用の空DBと `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_DATABASE`、`MYSQL_USER`、`MYSQL_PASSWORD` を用意してください。撮影ではタスクが作成されるため、開発用DBは使わないでください。
+
+旧 `record.mjs` と `demo.mjs` はSQLiteを使った期限追加の過去の試行用です。旧結果を使う場合は、対象と各結果を確認し、新しい形式に手動で記録してください。
+
+## テスト
+
+`npm run test:viewer` でレポート生成のテストを実行します。`npm test` にも含まれます。

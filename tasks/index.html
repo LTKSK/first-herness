@@ -1,217 +1,911 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>仕様とテストの一覧</title>
-<style>body{font-family:system-ui,sans-serif;line-height:1.7;color:#17223b;background:#f3f6fb;margin:0}main{max-width:1050px;margin:auto;padding:32px 20px 80px}h1{margin-bottom:4px}h2{margin-top:40px}p{margin:.65em 0}a{color:#1556a1}table{border-collapse:collapse;width:100%;background:white}td{border:1px solid #d7dfeb;padding:9px;vertical-align:top}.table{overflow-x:auto}details{background:white;border:1px solid #d7dfeb;border-radius:8px;margin:12px 0}summary{cursor:pointer;font-weight:700;padding:16px}summary span{font-size:.85em;font-weight:400;color:#53627a;margin-left:10px}.content{padding:0 20px 20px;overflow-wrap:anywhere}code{background:#eef2f7;padding:2px 4px;border-radius:3px}small{color:#53627a}</style></head>
-<body><main><h1>仕様とテストの一覧</h1><p>仕様は作成時の記録です。現在の実装とは異なる場合があります。テストの対応は存在を示し、実行結果を示すものではありません。</p><p><a href="#specifications">仕様を読む</a> · <a href="#tests">テストとの対応を見る</a></p><h2>一覧</h2><div class="table"><table><thead><tr><td>課題</td><td>仕様の状態</td><td>実装</td></tr></thead><tbody><tr><td><a href="#spec-1">タスクの完了</a></td><td>確定</td><td>実装済み</td></tr>
-<tr><td><a href="#spec-2">タイトル検索</a></td><td>確定</td><td>実装済み</td></tr>
-<tr><td><a href="#spec-3">タスク削除</a></td><td>草案（最終レビュー待ち）</td><td>実装済み</td></tr>
-<tr><td><a href="#spec-4">MySQLへの変更</a></td><td>草案</td><td>実装済み</td></tr>
-<tr><td><a href="#spec-5">期限の追加</a></td><td>過去の試行用課題</td><td>未実装</td></tr></tbody></table></div><h2 id="specifications">仕様</h2><details id="spec-1"><summary>タスクの完了 <span>確定 · 実装済み</span></summary><div class="content"><h2>タスクを完了できるようにする</h2>
-<ul>
-<li>状態: 確定</li>
-<li>対象コミット: <code>e6d91e36adc800fcba1af9b1d827a01906a4c3c7</code></li>
-</ul>
-<h3>要求</h3>
-<p>タスクを完了できるようにする。完了状態を表示し、選択したステータスで一覧を絞り込めるようにする。</p>
-<h3>目的</h3>
-<p>タスクの完了状況を管理し、必要なステータスのタスクを一覧で確認できるようにする。</p>
-<h3>現状</h3>
-<p>対象コミットでは、SQLiteにタスクのIDとタイトルを保存する。画面から作成・一覧表示・タイトル編集ができる。APIは一覧・作成・タイトル更新に対応する。完了状態やステータスによる絞り込みはない。</p>
-<p>根拠: <code>backend/src/app.ts</code>、<code>frontend/src/App.tsx</code>、<code>tests/api/tasks.test.ts</code>、<code>tests/e2e/tasks.spec.ts</code>。</p>
-<h3>振る舞い</h3>
-<ul>
-<li>[SPEC-01] タスクのステータスは未完了または完了とする。利用者は未完了のタスクを完了にし、完了したタスクを未完了に戻せる。</li>
-<li>[SPEC-02] 完了したタスクを一覧に表示するとき、完了であることが分かるようにする。</li>
-<li>[SPEC-03] 新規タスクと機能追加前に保存された既存タスクは未完了から始まる。ステータスは保存し、画面の再読み込みと同一DBでのAPI再起動後も保持する。</li>
-<li>[SPEC-04] 一覧では未完了・完了のステータスを1つ以上選択できる。選択したステータスに合致するタスクのみを表示する。</li>
-<li>[SPEC-05] 画面を開いた直後は未完了のみを選択する。画面を再読み込みした後も初期選択に戻す。</li>
-<li>[SPEC-06] 最後に選択されているステータスは解除できず、常に1つ以上が選択された状態を保つ。</li>
-</ul>
-<h3>受け入れ条件</h3>
-<ul>
-<li>[AC-01] 未完了タスクを完了にでき、完了タスクを未完了に戻せる。完了タスクを一覧に表示したとき完了と識別できる。</li>
-<li>[AC-02] 機能追加前の形式で保存された既存タスクを未完了として扱い、IDとタイトルを保持する。新規タスクも未完了として作成する。</li>
-<li>[AC-03] 完了と未完了の変更結果を、画面再読み込み後と同一DBを使ったAPI再起動後にも保持する。</li>
-<li>[AC-04] 未完了のみ、完了のみ、両方の各選択で、選択したステータスに一致するタスクだけを一覧に表示する。ステータス変更後も現在の選択に従って表示する。</li>
-<li>[AC-05] 画面を開いた直後と再読み込み後は、未完了のみを選択し、そのタスクだけを表示する。</li>
-<li>[AC-06] 1つだけ選択されているステータスの解除を試みても、その選択を維持する。</li>
-<li>[AC-07] 既存の作成・一覧・タイトル編集とタイトル入力の検証を維持する。保存失敗時はエラーを表示する。</li>
-</ul>
-<ul>
-<li>[AC-08] 入力不正や存在しないタスクなどの不正な要求には、適切な4xxのAPIレスポンスを返す。HTTP 500は、DBへのアクセス障害などの想定外のサーバー側エラーに使用する。</li>
-</ul>
-<h3>テストの読みやすさ</h3>
-<p>テストケース名は日本語で記述し、仕様と対応する振る舞いが分かるようにする。</p>
-<h3>既存機能との関係</h3>
-<p>既存タスクのIDとタイトルを保全する。絞り込みは表示対象を変えるものであり、タスクを削除しない。</p>
-<h3>判断したこと</h3>
-<ul>
-<li>完了を取り消して未完了に戻せる。</li>
-<li>完了を表示で示し、1つ以上のステータスを選んで絞り込める。</li>
-<li>既存・新規タスクは未完了から始まり、ステータスを再読み込みと再起動後も保持する。</li>
-<li>初期選択は未完了のみとする。最後の選択は解除できず、再読み込み時には初期選択に戻す。</li>
-</ul>
-<h3>未決事項</h3>
-<p>APIの形式、データ表現、画面コントロール、保存処理の詳細は実装者に委ねる。実装と評価の開始に必要な製品上の判断は、現時点では残っていない。</p>
-<h3>仕様と受け入れ条件の対応</h3>
-<p>以下は作成時の文書をもとに整理した対応です。テストとの対応は <a href="spec-test-map.md">仕様とテストの対応</a> を参照してください。</p>
-<div class="table"><table><tbody>
-<tr><td>仕様</td><td>受け入れ条件</td></tr>
-<tr><td>SPEC-01: 完了と未完了の切り替え</td><td>AC-01</td></tr>
-<tr><td>SPEC-02: 完了状態の表示</td><td>AC-01</td></tr>
-<tr><td>SPEC-03: 新規・既存タスクの初期状態と状態の保存</td><td>AC-02、AC-03</td></tr>
-<tr><td>SPEC-04: ステータスによる絞り込み</td><td>AC-04</td></tr>
-<tr><td>SPEC-05: 初期選択と再読み込み</td><td>AC-05</td></tr>
-<tr><td>SPEC-06: 最後の選択の維持</td><td>AC-06</td></tr>
-</tbody></table></div>
-<p>AC-07とAC-08は既存機能とAPIのエラーに関する条件です。個別の仕様IDは付いていません。</p></div></details>
-<details id="spec-2"><summary>タイトル検索 <span>確定 · 実装済み</span></summary><div class="content"><h2>タスクをタイトルで検索する</h2>
-<ul>
-<li>状態: 確定</li>
-<li>対象リポジトリ: /home/ltksk/workspace/first-hernes</li>
-<li>対象コミット: 1aba10e94e46cd18bcfe55501822b2a8e6cc5414</li>
-</ul>
-<h3>要求</h3>
-<p>タスクをタイトルで検索できるようにする。</p>
-<h3>目的</h3>
-<p>タイトルを手掛かりに目的のタスクを一覧から見つける。</p>
-<h3>現状</h3>
-<p>SQLiteにID・タイトル・完了状態を保存し、APIは全件をID順に返す。画面は取得したタスクをステータスで絞り込み、作成・編集・完了切り替えができる。根拠: backend/src/app.ts、frontend/src/App.tsx、tests/api/tasks.test.ts、tests/e2e/tasks.spec.ts、README.md。</p>
-<h3>振る舞い</h3>
-<ul>
-<li>[SPEC-01] タイトルの検索条件を入力し、一致するタスクを一覧に表示する。入力のたびに部分一致で絞り込み、英字の大文字小文字を区別しない。検索語の前後の空白は除去する。</li>
-<li>[SPEC-02] 検索条件を空にすると検索による絞り込みを解除する。</li>
-<li>[SPEC-03] 検索条件と選択されたステータスの両方に一致するタスクを表示する。</li>
-<li>[SPEC-04] 検索はタスクの保存データを変更しない。画面を開いた直後と再読み込み後は検索語を空にする。</li>
-</ul>
-<h3>受け入れ条件</h3>
-<ul>
-<li>[AC-01] 一致するタイトルのタスクが表示され、一致しないタスクは表示されない。</li>
-<li>[AC-02] 検索を空にすると検索前の対象に戻る。</li>
-<li>[AC-03] 既存のステータス絞り込みと、両方の条件に一致するタスクのみを表示する。</li>
-<li>[AC-04] 作成、タイトル編集、完了切り替えと既存の入力検証を維持し、変更後の一覧は現在の検索条件を反映する。</li>
-<li>[AC-05] 一致がない場合、空の一覧であることが分かる。</li>
-<li>[AC-06] 検索語の前後の空白を除去し、空白のみなら絞り込まない。再読み込み後は検索語が空になる。</li>
-</ul>
-<h3>既存機能との関係</h3>
-<p>検索は表示対象を変更する。タスクの削除や保存データの移行は必要としない。</p>
-<h3>判断したこと</h3>
-<ul>
-<li>ベースラインは作業開始時のHEAD。作業ツリーにGit管理上の変更はない。</li>
-<li>ユーザー回答: 部分一致、英字の大文字小文字を区別しない、入力するたびに反映、ステータスと両方に一致。</li>
-<li>ユーザー確認済み: 検索語の前後の空白を除去し、再読み込み時に空に戻す。既存のステータス選択と同様に画面内の一時的な条件として扱う。</li>
-</ul>
-<h3>未決事項</h3>
-<p>実装と評価の開始に必要な製品上の判断は残っていない。APIの形式や画面コントロールの詳細は実装者に委ねる。</p>
-<h3>仕様と受け入れ条件の対応</h3>
-<p>以下は作成時の文書をもとに整理した対応です。テストとの対応は <a href="spec-test-map.md">仕様とテストの対応</a> を参照してください。</p>
-<div class="table"><table><tbody>
-<tr><td>仕様</td><td>受け入れ条件</td></tr>
-<tr><td>SPEC-01: 部分一致と検索語の扱い</td><td>AC-01、AC-06。入力のたびの反映と英字の大小文字の区別については受け入れ条件に明記されていない。</td></tr>
-<tr><td>SPEC-02: 検索条件の解除</td><td>AC-02、AC-06</td></tr>
-<tr><td>SPEC-03: ステータスとの組み合わせ</td><td>AC-03</td></tr>
-<tr><td>SPEC-04: 検索語の初期化と保存データ</td><td>AC-06。検索で保存データを変更しないことは受け入れ条件に明記されていない。</td></tr>
-</tbody></table></div>
-<p>AC-04とAC-05は既存操作との関係と検索結果がない場合の条件です。個別の仕様IDは付いていません。</p></div></details>
-<details id="spec-3"><summary>タスク削除 <span>草案（最終レビュー待ち） · 実装済み</span></summary><div class="content"><h2>タスク削除</h2>
-<ul>
-<li>状態: 草案（削除方法はユーザーが確認済み）</li>
-<li>対象: first-hernes / 5b7e21c8efe3775bedf2443e9df1a4775e84538b</li>
-</ul>
-<h3>要求・目的</h3>
-<p>画面から不要なタスクを削除する。</p>
-<h3>現状</h3>
-<p>backend/src/app.ts は作成・一覧・更新をSQLiteに保存し、frontend/src/App.tsx は一覧、編集、完了切替、絞り込みを提供する。削除は未実装。</p>
-<h3>振る舞い・受け入れ条件</h3>
-<ul>
-<li>[AC-01] 一覧のタスクから削除を選び、確認ダイアログで了承すると対象だけを完全削除し、一覧から消す。未完了・完了の双方で操作可能。</li>
-<li>[AC-02] 確認をキャンセルすると削除しない。</li>
-<li>[AC-03] 削除結果は再読み込み及び同じDBの再オープン後も残り、他のタスクは維持される。</li>
-<li>[AC-04] 削除失敗時はエラーを表示し、画面の対象を維持する。</li>
-<li>[AC-05] APIは存在しないまたは不正なIDの削除を404で返す。</li>
-<li>[AC-06] 既存の作成・編集・完了切替・絞り込みを維持する。</li>
-</ul>
-<h3>判断</h3>
-<p>確認ダイアログ後の完全削除をユーザーが選択。API成功時は204、未存在IDは既存更新APIに合わせ404とする（実装上の判断）。</p>
-<h3>未決事項</h3>
-<p>なし。仕様全体は人による最終レビュー待ち。</p></div></details>
-<details id="spec-4"><summary>MySQLへの変更 <span>草案 · 実装済み</span></summary><div class="content"><h2>SQLite から Docker MySQL への変更</h2>
-<ul>
-<li>状態: 草案（既存データの扱いは回答済み）</li>
-<li>対象: first-hernes, ec23eb78d3bd57b9be3a6b64a876f2ae9bd0fe7d</li>
-<li>要求: databaseをsqliteからdockerで建てたmysqlに変更してほしい。agent-hernessを使って進めて。</li>
-</ul>
-<h3>目的と現状</h3>
-<p>既存のタスク管理アプリの永続化先を Docker 上の MySQL に変更する。baseline の backend/src/app.ts と server.ts は node:sqlite を利用し、API と E2E は個別の一時 SQLite DB を利用する。README.md にユーザーの未コミット変更があるため保持する。</p>
-<h3>振る舞い・受け入れ条件</h3>
-<ul>
-<li>[AC-01] Docker Compose で MySQL を起動し、API は設定可能な接続先を使い、必要なテーブルを用意する。</li>
-<li>[AC-02] タスクの作成・一覧・更新・完了状態・削除と既存の入力検証、HTTP応答を維持する。</li>
-<li>[AC-03] API の再起動後も同じ MySQL のデータを読み出せる。</li>
-<li>[AC-04] API と E2E のテストは開発データから分離した MySQL を使用する。</li>
-<li>[AC-05] 起動、設定、テスト方法を README に記載する。</li>
-<li>[AC-06] 既存 SQLite データを取り込まず、新規の空の MySQL データベースで開始する。</li>
-</ul>
-<h3>判断・未決事項</h3>
-<p>既存 SQLite データは引き継がず新規の空データベースで開始する（ユーザー回答）。DB 資格情報は開発用の設定例と環境変数を使用する。既存の未コミット README は候補に混ぜない。</p></div></details>
-<details id="spec-5"><summary>期限の追加 <span>過去の試行用課題 · 未実装</span></summary><div class="content"><h2>課題: タスクに期限を追加する</h2>
-<p>既存のタスク管理アプリに任意の期限を追加してください。</p>
-<h3>受け入れ条件</h3>
-<ul>
-<li>タスクの作成・編集時に期限を入力または解除でき、一覧で確認できる。期限は日付だけを扱い、時刻やタイムゾーンは扱わない。</li>
-<li>APIのタスク表現に <code>dueDate</code> を追加する。値は実在する日付を表す <code>YYYY-MM-DD</code> 形式の文字列か <code>null</code> とする。</li>
-<li>作成時に <code>dueDate</code> を省略した場合は <code>null</code> とする。更新時に省略した場合は既存の期限を維持し、<code>null</code> の場合は期限を解除する。不正な期限は400とする。</li>
-<li>既存のDBを開いた場合、既存タスクを保持して期限を <code>null</code> にする。アプリを再起動しても変更は保持される。</li>
-<li>タイトルの既存の仕様と、作成・一覧・更新の既存の動作を維持する。入力・保存エラーは画面に表示する。</li>
-<li>この変更に必要なAPIテストと画面E2Eテストを追加・更新する。既存の受け入れ条件を弱めない。</li>
-<li><code>npm run typecheck</code>、<code>npm run lint</code>、<code>npm test</code>、<code>npm run test:e2e</code> を実行し、結果と変更ファイルを報告する。テストの変更理由も報告する。</li>
-</ul>
-<p>この課題のコードをコミットしないでください。評価用資産を探さないでください。</p></div></details><section id="tests"><h2>テストとの対応</h2><h2>仕様とテストの対応</h2>
-<p>各テスト名はコード内の名前です。対応はテストの存在を示し、直近の実行結果を示すものではありません。複数の条件を含む受け入れ条件では、挙げたテストが一部を確認する場合があります。</p>
-<ul>
-<li>API: <a href="../tests/api/tasks.test.ts">tests/api/tasks.test.ts</a></li>
-<li>画面: <a href="../tests/e2e/tasks.spec.ts">tests/e2e/tasks.spec.ts</a></li>
-<li>検索の単体テスト: <a href="../tests/unit/search.test.ts">tests/unit/search.test.ts</a></li>
-<li><code>%s</code> を含む名前は複数の入力で実行されるテストです。</li>
-</ul>
-<h3><a href="task-completion.md">タスクの完了</a></h3>
-<div class="table"><table><tbody>
-<tr><td>受け入れ条件</td><td>対応するテストと未確認の範囲</td></tr>
-<tr><td>AC-01</td><td>画面: <code>完了タスクを未完了に戻すとフィルター表示が変わる</code>、<code>選択したステータスのタスクだけを表示する</code></td></tr>
-<tr><td>AC-02</td><td>API: <code>新規タスクを未完了で作成する</code>。従来のSQLiteデータを移行する条件は当時の仕様であり、MySQL移行時には既存データを引き継がないと判断した。</td></tr>
-<tr><td>AC-03</td><td>API: <code>%sへの変更をMySQLへの再接続後も保持する</code>。画面: <code>完了タスクを未完了に戻すとフィルター表示が変わる</code>。APIサーバープロセスを再起動するテストは未確認。</td></tr>
-<tr><td>AC-04</td><td>画面: <code>選択したステータスのタスクだけを表示する</code>、<code>完了タスクを未完了に戻すとフィルター表示が変わる</code></td></tr>
-<tr><td>AC-05</td><td>画面: <code>再読み込みすると未完了のみを選択する</code>、<code>選択したステータスのタスクだけを表示する</code></td></tr>
-<tr><td>AC-06</td><td>画面: <code>未完了のみのとき最後のステータスを解除できない</code>、<code>完了のみのとき最後のステータスを解除できない</code></td></tr>
-<tr><td>AC-07</td><td>画面: <code>編集したタイトルを再読み込み後も表示する</code>、<code>空のタイトルを追加すると入力エラーを表示する</code>、<code>タスク作成で500が返ると保存エラーを表示する</code>、<code>タイトル編集で500が返ると保存エラーを表示する</code>、<code>完了状態の保存で500が返るとエラーを表示し状態を維持する</code></td></tr>
-<tr><td>AC-08</td><td>API: <code>真偽値以外の完了状態を400で拒否する</code>、<code>不正なID %s の更新に404を返す</code>、<code>更新時に不正なJSONを400で拒否する</code>、<code>想定外のDB障害には500を返す</code></td></tr>
-</tbody></table></div>
-<h3><a href="title-search.md">タイトル検索</a></h3>
-<div class="table"><table><tbody>
-<tr><td>受け入れ条件</td><td>対応するテスト</td></tr>
-<tr><td>AC-01、AC-02、AC-05</td><td>画面: <code>タイトル検索に入力すると大小文字を区別せず部分一致するタスクだけを表示し、消去すると一覧に戻る</code></td></tr>
-<tr><td>AC-03</td><td>画面: <code>検索中にステータスを選択するとタイトルとステータスの両方に一致するタスクを表示する</code></td></tr>
-<tr><td>AC-04</td><td>画面: <code>検索中にタスクのタイトルを編集すると保存結果が現在の検索条件に反映される</code>、<code>検索中にタスクを追加し完了すると現在の検索とステータスの条件が一覧に反映される</code>、<code>空のタイトルを追加すると入力エラーを表示する</code></td></tr>
-<tr><td>AC-06</td><td>単体: <code>検索語の前後に空白があると除去した語でタイトルに一致する</code>、<code>空文字または空白だけの検索語ではすべてのタイトルに一致する</code>。画面: <code>検索中に再読み込みすると検索語が空になり保存済みタスクを一覧に表示する</code></td></tr>
-</tbody></table></div>
-<h3><a href="task-deletion.md">タスク削除</a></h3>
-<div class="table"><table><tbody>
-<tr><td>受け入れ条件</td><td>対応するテスト</td></tr>
-<tr><td>AC-01</td><td>画面: <code>確認を了承すると対象タスクだけ削除され再読み込み後も残らない</code>、<code>完了タスクを一覧から削除すると再読み込み後も表示されない</code></td></tr>
-<tr><td>AC-02</td><td>画面: <code>削除確認をキャンセルすると対象タスクが一覧に残る</code></td></tr>
-<tr><td>AC-03</td><td>API: <code>削除したタスクは同じMySQLへ再接続した一覧に現れず、他のタスクは残る</code>。画面: <code>確認を了承すると対象タスクだけ削除され再読み込み後も残らない</code></td></tr>
-<tr><td>AC-04</td><td>画面: <code>削除APIが失敗するとエラーを表示し対象タスクを維持する</code></td></tr>
-<tr><td>AC-05</td><td>API: <code>存在しないか不正なID %s の削除に404を返す</code></td></tr>
-<tr><td>AC-06</td><td>上記の完了と検索、および画面の <code>編集したタイトルを再読み込み後も表示する</code> などの既存テスト</td></tr>
-</tbody></table></div>
-<h3><a href="mysql-migration.md">MySQLへの変更</a></h3>
-<div class="table"><table><tbody>
-<tr><td>受け入れ条件</td><td>対応するテストと未確認の範囲</td></tr>
-<tr><td>AC-01</td><td>APIと画面テストはMySQLを使用する。Composeの起動と接続先設定を直接検証するテストは未確認。</td></tr>
-<tr><td>AC-02</td><td>API: <code>新規タスクを未完了で作成する</code>、<code>MySQLへの接続を開き直しても更新済みタイトルを一覧に表示する</code>、<code>削除したタスクは同じMySQLへ再接続した一覧に現れず、他のタスクは残る</code> など。完了と削除の対応も参照。</td></tr>
-<tr><td>AC-03</td><td>API: <code>%sへの変更をMySQLへの再接続後も保持する</code>、<code>MySQLへの接続を開き直しても更新済みタイトルを一覧に表示する</code>。APIサーバープロセスの再起動は未確認。</td></tr>
-<tr><td>AC-04</td><td>APIとE2Eのテスト用MySQLは実行スクリプトで用意される。分離そのものを検証するテストは未確認。</td></tr>
-<tr><td>AC-05</td><td><a href="../README.md">README</a> に手順を記載。文書の内容を検証するテストは未確認。</td></tr>
-<tr><td>AC-06</td><td>SQLiteデータを取り込まないことを直接検証するテストは未確認。</td></tr>
-</tbody></table></div>
-<h3><a href="due-date.md">期限の追加</a></h3>
-<p>過去の試行用課題であり、現行の実装には取り込まれていません。対応するテストはありません。</p></section><hr><small>仕様または対応表を更新したら、リポジトリのルートで node tasks/build-index.mjs を実行してください。</small></main><script>function reveal(){const target=document.getElementById(location.hash.slice(1));if(target?.tagName==='DETAILS')target.open=true}addEventListener('hashchange',reveal);reveal()</script></body></html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>仕様とテストの一覧</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        line-height: 1.7;
+        color: #17223b;
+        background: #f3f6fb;
+        margin: 0;
+      }
+      main {
+        max-width: 1050px;
+        margin: auto;
+        padding: 32px 20px 80px;
+      }
+      h1 {
+        margin-bottom: 4px;
+      }
+      h2 {
+        margin-top: 40px;
+      }
+      p {
+        margin: 0.65em 0;
+      }
+      a {
+        color: #1556a1;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        background: white;
+      }
+      td {
+        border: 1px solid #d7dfeb;
+        padding: 9px;
+        vertical-align: top;
+      }
+      .table {
+        overflow-x: auto;
+      }
+      details {
+        background: white;
+        border: 1px solid #d7dfeb;
+        border-radius: 8px;
+        margin: 12px 0;
+      }
+      summary {
+        cursor: pointer;
+        font-weight: 700;
+        padding: 16px;
+      }
+      summary span {
+        font-size: 0.85em;
+        font-weight: 400;
+        color: #53627a;
+        margin-left: 10px;
+      }
+      .content {
+        padding: 0 20px 20px;
+        overflow-wrap: anywhere;
+      }
+      code {
+        background: #eef2f7;
+        padding: 2px 4px;
+        border-radius: 3px;
+      }
+      small {
+        color: #53627a;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>仕様とテストの一覧</h1>
+      <p>
+        仕様は作成時の記録です。現在の実装とは異なる場合があります。テストの対応は存在を示し、実行結果を示すものではありません。
+      </p>
+      <p><a href="#specifications">仕様を読む</a> · <a href="#tests">テストとの対応を見る</a></p>
+      <h2>一覧</h2>
+      <div class="table">
+        <table>
+          <thead>
+            <tr>
+              <td>課題</td>
+              <td>仕様の状態</td>
+              <td>実装</td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="#spec-1">タスクの完了</a></td>
+              <td>確定</td>
+              <td>実装済み</td>
+            </tr>
+            <tr>
+              <td><a href="#spec-2">タイトル検索</a></td>
+              <td>確定</td>
+              <td>実装済み</td>
+            </tr>
+            <tr>
+              <td><a href="#spec-3">タスク削除</a></td>
+              <td>草案（最終レビュー待ち）</td>
+              <td>実装済み</td>
+            </tr>
+            <tr>
+              <td><a href="#spec-4">MySQLへの変更</a></td>
+              <td>草案</td>
+              <td>実装済み</td>
+            </tr>
+            <tr>
+              <td><a href="#spec-5">期限の追加</a></td>
+              <td>過去の試行用課題</td>
+              <td>未実装</td>
+            </tr>
+            <tr>
+              <td><a href="#spec-6">レビュー用HTMLの汎用化</a></td>
+              <td>確定</td>
+              <td>実装済み</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <h2 id="specifications">仕様</h2>
+      <details id="spec-1">
+        <summary>タスクの完了 <span>確定 · 実装済み</span></summary>
+        <div class="content">
+          <h2>タスクを完了できるようにする</h2>
+          <ul>
+            <li>状態: 確定</li>
+            <li>対象コミット: <code>e6d91e36adc800fcba1af9b1d827a01906a4c3c7</code></li>
+          </ul>
+          <h3>要求</h3>
+          <p>
+            タスクを完了できるようにする。完了状態を表示し、選択したステータスで一覧を絞り込めるようにする。
+          </p>
+          <h3>目的</h3>
+          <p>タスクの完了状況を管理し、必要なステータスのタスクを一覧で確認できるようにする。</p>
+          <h3>現状</h3>
+          <p>
+            対象コミットでは、SQLiteにタスクのIDとタイトルを保存する。画面から作成・一覧表示・タイトル編集ができる。APIは一覧・作成・タイトル更新に対応する。完了状態やステータスによる絞り込みはない。
+          </p>
+          <p>
+            根拠:
+            <code>backend/src/app.ts</code
+            >、<code>frontend/src/App.tsx</code>、<code>tests/api/tasks.test.ts</code>、<code>tests/e2e/tasks.spec.ts</code>。
+          </p>
+          <h3>振る舞い</h3>
+          <ul>
+            <li>
+              [SPEC-01]
+              タスクのステータスは未完了または完了とする。利用者は未完了のタスクを完了にし、完了したタスクを未完了に戻せる。
+            </li>
+            <li>
+              [SPEC-02] 完了したタスクを一覧に表示するとき、完了であることが分かるようにする。
+            </li>
+            <li>
+              [SPEC-03]
+              新規タスクと機能追加前に保存された既存タスクは未完了から始まる。ステータスは保存し、画面の再読み込みと同一DBでのAPI再起動後も保持する。
+            </li>
+            <li>
+              [SPEC-04]
+              一覧では未完了・完了のステータスを1つ以上選択できる。選択したステータスに合致するタスクのみを表示する。
+            </li>
+            <li>
+              [SPEC-05]
+              画面を開いた直後は未完了のみを選択する。画面を再読み込みした後も初期選択に戻す。
+            </li>
+            <li>
+              [SPEC-06]
+              最後に選択されているステータスは解除できず、常に1つ以上が選択された状態を保つ。
+            </li>
+          </ul>
+          <h3>受け入れ条件</h3>
+          <ul>
+            <li>
+              [AC-01]
+              未完了タスクを完了にでき、完了タスクを未完了に戻せる。完了タスクを一覧に表示したとき完了と識別できる。
+            </li>
+            <li>
+              [AC-02]
+              機能追加前の形式で保存された既存タスクを未完了として扱い、IDとタイトルを保持する。新規タスクも未完了として作成する。
+            </li>
+            <li>
+              [AC-03]
+              完了と未完了の変更結果を、画面再読み込み後と同一DBを使ったAPI再起動後にも保持する。
+            </li>
+            <li>
+              [AC-04]
+              未完了のみ、完了のみ、両方の各選択で、選択したステータスに一致するタスクだけを一覧に表示する。ステータス変更後も現在の選択に従って表示する。
+            </li>
+            <li>
+              [AC-05]
+              画面を開いた直後と再読み込み後は、未完了のみを選択し、そのタスクだけを表示する。
+            </li>
+            <li>[AC-06] 1つだけ選択されているステータスの解除を試みても、その選択を維持する。</li>
+            <li>
+              [AC-07]
+              既存の作成・一覧・タイトル編集とタイトル入力の検証を維持する。保存失敗時はエラーを表示する。
+            </li>
+          </ul>
+          <ul>
+            <li>
+              [AC-08]
+              入力不正や存在しないタスクなどの不正な要求には、適切な4xxのAPIレスポンスを返す。HTTP
+              500は、DBへのアクセス障害などの想定外のサーバー側エラーに使用する。
+            </li>
+          </ul>
+          <h3>テストの読みやすさ</h3>
+          <p>テストケース名は日本語で記述し、仕様と対応する振る舞いが分かるようにする。</p>
+          <h3>既存機能との関係</h3>
+          <p>
+            既存タスクのIDとタイトルを保全する。絞り込みは表示対象を変えるものであり、タスクを削除しない。
+          </p>
+          <h3>判断したこと</h3>
+          <ul>
+            <li>完了を取り消して未完了に戻せる。</li>
+            <li>完了を表示で示し、1つ以上のステータスを選んで絞り込める。</li>
+            <li>
+              既存・新規タスクは未完了から始まり、ステータスを再読み込みと再起動後も保持する。
+            </li>
+            <li>
+              初期選択は未完了のみとする。最後の選択は解除できず、再読み込み時には初期選択に戻す。
+            </li>
+          </ul>
+          <h3>未決事項</h3>
+          <p>
+            APIの形式、データ表現、画面コントロール、保存処理の詳細は実装者に委ねる。実装と評価の開始に必要な製品上の判断は、現時点では残っていない。
+          </p>
+          <h3>仕様と受け入れ条件の対応</h3>
+          <p>
+            以下は作成時の文書をもとに整理した対応です。テストとの対応は
+            <a href="spec-test-map.md">仕様とテストの対応</a> を参照してください。
+          </p>
+          <div class="table">
+            <table>
+              <tbody>
+                <tr>
+                  <td>仕様</td>
+                  <td>受け入れ条件</td>
+                </tr>
+                <tr>
+                  <td>SPEC-01: 完了と未完了の切り替え</td>
+                  <td>AC-01</td>
+                </tr>
+                <tr>
+                  <td>SPEC-02: 完了状態の表示</td>
+                  <td>AC-01</td>
+                </tr>
+                <tr>
+                  <td>SPEC-03: 新規・既存タスクの初期状態と状態の保存</td>
+                  <td>AC-02、AC-03</td>
+                </tr>
+                <tr>
+                  <td>SPEC-04: ステータスによる絞り込み</td>
+                  <td>AC-04</td>
+                </tr>
+                <tr>
+                  <td>SPEC-05: 初期選択と再読み込み</td>
+                  <td>AC-05</td>
+                </tr>
+                <tr>
+                  <td>SPEC-06: 最後の選択の維持</td>
+                  <td>AC-06</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>AC-07とAC-08は既存機能とAPIのエラーに関する条件です。個別の仕様IDは付いていません。</p>
+        </div>
+      </details>
+      <details id="spec-2">
+        <summary>タイトル検索 <span>確定 · 実装済み</span></summary>
+        <div class="content">
+          <h2>タスクをタイトルで検索する</h2>
+          <ul>
+            <li>状態: 確定</li>
+            <li>対象リポジトリ: /home/ltksk/workspace/first-hernes</li>
+            <li>対象コミット: 1aba10e94e46cd18bcfe55501822b2a8e6cc5414</li>
+          </ul>
+          <h3>要求</h3>
+          <p>タスクをタイトルで検索できるようにする。</p>
+          <h3>目的</h3>
+          <p>タイトルを手掛かりに目的のタスクを一覧から見つける。</p>
+          <h3>現状</h3>
+          <p>
+            SQLiteにID・タイトル・完了状態を保存し、APIは全件をID順に返す。画面は取得したタスクをステータスで絞り込み、作成・編集・完了切り替えができる。根拠:
+            backend/src/app.ts、frontend/src/App.tsx、tests/api/tasks.test.ts、tests/e2e/tasks.spec.ts、README.md。
+          </p>
+          <h3>振る舞い</h3>
+          <ul>
+            <li>
+              [SPEC-01]
+              タイトルの検索条件を入力し、一致するタスクを一覧に表示する。入力のたびに部分一致で絞り込み、英字の大文字小文字を区別しない。検索語の前後の空白は除去する。
+            </li>
+            <li>[SPEC-02] 検索条件を空にすると検索による絞り込みを解除する。</li>
+            <li>[SPEC-03] 検索条件と選択されたステータスの両方に一致するタスクを表示する。</li>
+            <li>
+              [SPEC-04]
+              検索はタスクの保存データを変更しない。画面を開いた直後と再読み込み後は検索語を空にする。
+            </li>
+          </ul>
+          <h3>受け入れ条件</h3>
+          <ul>
+            <li>[AC-01] 一致するタイトルのタスクが表示され、一致しないタスクは表示されない。</li>
+            <li>[AC-02] 検索を空にすると検索前の対象に戻る。</li>
+            <li>[AC-03] 既存のステータス絞り込みと、両方の条件に一致するタスクのみを表示する。</li>
+            <li>
+              [AC-04]
+              作成、タイトル編集、完了切り替えと既存の入力検証を維持し、変更後の一覧は現在の検索条件を反映する。
+            </li>
+            <li>[AC-05] 一致がない場合、空の一覧であることが分かる。</li>
+            <li>
+              [AC-06]
+              検索語の前後の空白を除去し、空白のみなら絞り込まない。再読み込み後は検索語が空になる。
+            </li>
+          </ul>
+          <h3>既存機能との関係</h3>
+          <p>検索は表示対象を変更する。タスクの削除や保存データの移行は必要としない。</p>
+          <h3>判断したこと</h3>
+          <ul>
+            <li>ベースラインは作業開始時のHEAD。作業ツリーにGit管理上の変更はない。</li>
+            <li>
+              ユーザー回答:
+              部分一致、英字の大文字小文字を区別しない、入力するたびに反映、ステータスと両方に一致。
+            </li>
+            <li>
+              ユーザー確認済み:
+              検索語の前後の空白を除去し、再読み込み時に空に戻す。既存のステータス選択と同様に画面内の一時的な条件として扱う。
+            </li>
+          </ul>
+          <h3>未決事項</h3>
+          <p>
+            実装と評価の開始に必要な製品上の判断は残っていない。APIの形式や画面コントロールの詳細は実装者に委ねる。
+          </p>
+          <h3>仕様と受け入れ条件の対応</h3>
+          <p>
+            以下は作成時の文書をもとに整理した対応です。テストとの対応は
+            <a href="spec-test-map.md">仕様とテストの対応</a> を参照してください。
+          </p>
+          <div class="table">
+            <table>
+              <tbody>
+                <tr>
+                  <td>仕様</td>
+                  <td>受け入れ条件</td>
+                </tr>
+                <tr>
+                  <td>SPEC-01: 部分一致と検索語の扱い</td>
+                  <td>
+                    AC-01、AC-06。入力のたびの反映と英字の大小文字の区別については受け入れ条件に明記されていない。
+                  </td>
+                </tr>
+                <tr>
+                  <td>SPEC-02: 検索条件の解除</td>
+                  <td>AC-02、AC-06</td>
+                </tr>
+                <tr>
+                  <td>SPEC-03: ステータスとの組み合わせ</td>
+                  <td>AC-03</td>
+                </tr>
+                <tr>
+                  <td>SPEC-04: 検索語の初期化と保存データ</td>
+                  <td>AC-06。検索で保存データを変更しないことは受け入れ条件に明記されていない。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            AC-04とAC-05は既存操作との関係と検索結果がない場合の条件です。個別の仕様IDは付いていません。
+          </p>
+        </div>
+      </details>
+      <details id="spec-3">
+        <summary>タスク削除 <span>草案（最終レビュー待ち） · 実装済み</span></summary>
+        <div class="content">
+          <h2>タスク削除</h2>
+          <ul>
+            <li>状態: 草案（削除方法はユーザーが確認済み）</li>
+            <li>対象: first-hernes / 5b7e21c8efe3775bedf2443e9df1a4775e84538b</li>
+          </ul>
+          <h3>要求・目的</h3>
+          <p>画面から不要なタスクを削除する。</p>
+          <h3>現状</h3>
+          <p>
+            backend/src/app.ts は作成・一覧・更新をSQLiteに保存し、frontend/src/App.tsx
+            は一覧、編集、完了切替、絞り込みを提供する。削除は未実装。
+          </p>
+          <h3>振る舞い・受け入れ条件</h3>
+          <ul>
+            <li>
+              [AC-01]
+              一覧のタスクから削除を選び、確認ダイアログで了承すると対象だけを完全削除し、一覧から消す。未完了・完了の双方で操作可能。
+            </li>
+            <li>[AC-02] 確認をキャンセルすると削除しない。</li>
+            <li>
+              [AC-03] 削除結果は再読み込み及び同じDBの再オープン後も残り、他のタスクは維持される。
+            </li>
+            <li>[AC-04] 削除失敗時はエラーを表示し、画面の対象を維持する。</li>
+            <li>[AC-05] APIは存在しないまたは不正なIDの削除を404で返す。</li>
+            <li>[AC-06] 既存の作成・編集・完了切替・絞り込みを維持する。</li>
+          </ul>
+          <h3>判断</h3>
+          <p>
+            確認ダイアログ後の完全削除をユーザーが選択。API成功時は204、未存在IDは既存更新APIに合わせ404とする（実装上の判断）。
+          </p>
+          <h3>未決事項</h3>
+          <p>なし。仕様全体は人による最終レビュー待ち。</p>
+        </div>
+      </details>
+      <details id="spec-4">
+        <summary>MySQLへの変更 <span>草案 · 実装済み</span></summary>
+        <div class="content">
+          <h2>SQLite から Docker MySQL への変更</h2>
+          <ul>
+            <li>状態: 草案（既存データの扱いは回答済み）</li>
+            <li>対象: first-hernes, ec23eb78d3bd57b9be3a6b64a876f2ae9bd0fe7d</li>
+            <li>
+              要求:
+              databaseをsqliteからdockerで建てたmysqlに変更してほしい。agent-hernessを使って進めて。
+            </li>
+          </ul>
+          <h3>目的と現状</h3>
+          <p>
+            既存のタスク管理アプリの永続化先を Docker 上の MySQL に変更する。baseline の
+            backend/src/app.ts と server.ts は node:sqlite を利用し、API と E2E は個別の一時 SQLite
+            DB を利用する。README.md にユーザーの未コミット変更があるため保持する。
+          </p>
+          <h3>振る舞い・受け入れ条件</h3>
+          <ul>
+            <li>
+              [AC-01] Docker Compose で MySQL を起動し、API
+              は設定可能な接続先を使い、必要なテーブルを用意する。
+            </li>
+            <li>
+              [AC-02] タスクの作成・一覧・更新・完了状態・削除と既存の入力検証、HTTP応答を維持する。
+            </li>
+            <li>[AC-03] API の再起動後も同じ MySQL のデータを読み出せる。</li>
+            <li>[AC-04] API と E2E のテストは開発データから分離した MySQL を使用する。</li>
+            <li>[AC-05] 起動、設定、テスト方法を README に記載する。</li>
+            <li>
+              [AC-06] 既存 SQLite データを取り込まず、新規の空の MySQL データベースで開始する。
+            </li>
+          </ul>
+          <h3>判断・未決事項</h3>
+          <p>
+            既存 SQLite データは引き継がず新規の空データベースで開始する（ユーザー回答）。DB
+            資格情報は開発用の設定例と環境変数を使用する。既存の未コミット README は候補に混ぜない。
+          </p>
+        </div>
+      </details>
+      <details id="spec-5">
+        <summary>期限の追加 <span>過去の試行用課題 · 未実装</span></summary>
+        <div class="content">
+          <h2>課題: タスクに期限を追加する</h2>
+          <p>既存のタスク管理アプリに任意の期限を追加してください。</p>
+          <h3>受け入れ条件</h3>
+          <ul>
+            <li>
+              タスクの作成・編集時に期限を入力または解除でき、一覧で確認できる。期限は日付だけを扱い、時刻やタイムゾーンは扱わない。
+            </li>
+            <li>
+              APIのタスク表現に <code>dueDate</code> を追加する。値は実在する日付を表す
+              <code>YYYY-MM-DD</code> 形式の文字列か <code>null</code> とする。
+            </li>
+            <li>
+              作成時に <code>dueDate</code> を省略した場合は
+              <code>null</code> とする。更新時に省略した場合は既存の期限を維持し、<code>null</code>
+              の場合は期限を解除する。不正な期限は400とする。
+            </li>
+            <li>
+              既存のDBを開いた場合、既存タスクを保持して期限を
+              <code>null</code> にする。アプリを再起動しても変更は保持される。
+            </li>
+            <li>
+              タイトルの既存の仕様と、作成・一覧・更新の既存の動作を維持する。入力・保存エラーは画面に表示する。
+            </li>
+            <li>
+              この変更に必要なAPIテストと画面E2Eテストを追加・更新する。既存の受け入れ条件を弱めない。
+            </li>
+            <li>
+              <code>npm run typecheck</code>、<code>npm run lint</code>、<code>npm test</code
+              >、<code>npm run test:e2e</code>
+              を実行し、結果と変更ファイルを報告する。テストの変更理由も報告する。
+            </li>
+          </ul>
+          <p>この課題のコードをコミットしないでください。評価用資産を探さないでください。</p>
+        </div>
+      </details>
+      <details id="spec-6">
+        <summary>レビュー用HTMLの汎用化 <span>確定 · 実装済み</span></summary>
+        <div class="content">
+          <h2>レビュー用HTMLの汎用化</h2>
+          <ul>
+            <li>状態: 確定</li>
+            <li>対象リポジトリ: first-hernes</li>
+            <li>対象コミット: <code>22c7ced1a7c151313db952124ce4d7feb0ea4dc1</code></li>
+          </ul>
+          <h3>要求</h3>
+          <p>
+            どのタスクでも、仕様、テスト結果、評価、修正履歴と動画を人が確認できるHTMLにまとめる。
+          </p>
+          <h3>目的</h3>
+          <p>評価後の人によるレビューに必要な情報を、タスクごとの手作業を減らして提示する。</p>
+          <h3>現状</h3>
+          <p>
+            <code>viewer/build.mjs</code> は
+            <code>report.json</code> と動画から単一HTMLを生成する。<code>viewer/demo.mjs</code>
+            は期限追加の結果に固定され、評価と修正の記録を汎用的に取りまとめない。<code
+              >viewer/record.mjs</code
+            >
+            は期限追加とSQLiteに固定されている。現在の保存先はMySQLである。
+          </p>
+          <h3>振る舞い</h3>
+          <ul>
+            <li>
+              [SPEC-01]
+              タスク固有の情報を入力し、仕様と対応するテスト、評価、指摘、修正と再評価をまとめる。
+            </li>
+            <li>
+              [SPEC-02]
+              実行結果と未実施・未確認を区別し、対応するテストがない仕様を成功とみなさない。
+            </li>
+            <li>
+              [SPEC-03]
+              実際の候補を撮影した機能の操作動画と注釈付き動画を単一HTMLに埋め込む。撮影できなかった場合は、その事実と理由を記録する。
+            </li>
+            <li>
+              [SPEC-04]
+              タスクごとの操作シナリオを使い、共通の手順で動画を作成できる。シナリオの内容はタスクに応じて作成する。
+            </li>
+            <li>
+              [SPEC-05]
+              評価と修正の別々の記録を読み取り、対応関係を確認できる。評価結果や動画の対象が候補と一致しない場合は、それを別候補の結果として表示しない。
+            </li>
+          </ul>
+          <h3>受け入れ条件</h3>
+          <ul>
+            <li>
+              [AC-01]
+              期限追加以外の課題について、タスク固有のデータを入力すると単一HTMLを生成できる。機能の概要、仕様とテスト名・結果、評価、修正履歴を表示する。（SPEC-01）
+            </li>
+            <li>
+              [AC-02]
+              未実施・未確認やテストのない仕様を明示する。確認できていない項目を成功と表示しない。（SPEC-02）
+            </li>
+            <li>
+              [AC-03]
+              同一候補の通常動画と注釈付き動画をHTMLに埋め込む。動画がない場合は未取得と理由を表示する。（SPEC-03）
+            </li>
+            <li>
+              [AC-04]
+              共通の撮影手順とタスク固有の操作シナリオで、現在のアプリを撮影できる。シナリオから自動で仕様の網羅性を保証したと扱わない。（SPEC-04）
+            </li>
+            <li>
+              [AC-05]
+              評価の指摘IDと修正、修正に対応する再評価を表示する。対象候補や参照IDの不整合は明示し、成功と扱わない。（SPEC-05）
+            </li>
+            <li>
+              [AC-06]
+              入力形式、記録方法、HTMLと動画の生成方法をREADMEに記載する。既存の試行結果は必要な変換方法を明示して扱う。
+            </li>
+          </ul>
+          <h3>仕様と受け入れ条件の対応</h3>
+          <p>
+            SPEC-01: AC-01、SPEC-02: AC-02、SPEC-03: AC-03、SPEC-04: AC-04、SPEC-05:
+            AC-05。AC-06は運用手順に関する条件。
+          </p>
+          <h3>判断したこと</h3>
+          <ul>
+            <li>単一HTMLを人による最終レビューに用いる。</li>
+            <li>動画は通常版と注釈付きの2本を優先する。</li>
+            <li>評価結果の詳細や動画は試行ごとの成果物として扱う。</li>
+          </ul>
+          <h3>未決事項</h3>
+          <ul>
+            <li>実行時のデータ形式と自動化の実装方法は、上記を満たす範囲で実装時に決める。</li>
+            <li>仕様全体はユーザーが確認済み。</li>
+          </ul>
+        </div>
+      </details>
+      <section id="tests">
+        <h2>テストとの対応</h2>
+        <h2>仕様とテストの対応</h2>
+        <p>
+          各テスト名はコード内の名前です。対応はテストの存在を示し、直近の実行結果を示すものではありません。複数の条件を含む受け入れ条件では、挙げたテストが一部を確認する場合があります。
+        </p>
+        <ul>
+          <li>API: <a href="../tests/api/tasks.test.ts">tests/api/tasks.test.ts</a></li>
+          <li>画面: <a href="../tests/e2e/tasks.spec.ts">tests/e2e/tasks.spec.ts</a></li>
+          <li>
+            検索の単体テスト: <a href="../tests/unit/search.test.ts">tests/unit/search.test.ts</a>
+          </li>
+          <li><code>%s</code> を含む名前は複数の入力で実行されるテストです。</li>
+        </ul>
+        <h3><a href="task-completion.md">タスクの完了</a></h3>
+        <div class="table">
+          <table>
+            <tbody>
+              <tr>
+                <td>受け入れ条件</td>
+                <td>対応するテストと未確認の範囲</td>
+              </tr>
+              <tr>
+                <td>AC-01</td>
+                <td>
+                  画面: <code>完了タスクを未完了に戻すとフィルター表示が変わる</code>、<code
+                    >選択したステータスのタスクだけを表示する</code
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>AC-02</td>
+                <td>
+                  API:
+                  <code>新規タスクを未完了で作成する</code
+                  >。従来のSQLiteデータを移行する条件は当時の仕様であり、MySQL移行時には既存データを引き継がないと判断した。
+                </td>
+              </tr>
+              <tr>
+                <td>AC-03</td>
+                <td>
+                  API: <code>%sへの変更をMySQLへの再接続後も保持する</code>。画面:
+                  <code>完了タスクを未完了に戻すとフィルター表示が変わる</code
+                  >。APIサーバープロセスを再起動するテストは未確認。
+                </td>
+              </tr>
+              <tr>
+                <td>AC-04</td>
+                <td>
+                  画面: <code>選択したステータスのタスクだけを表示する</code>、<code
+                    >完了タスクを未完了に戻すとフィルター表示が変わる</code
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>AC-05</td>
+                <td>
+                  画面: <code>再読み込みすると未完了のみを選択する</code>、<code
+                    >選択したステータスのタスクだけを表示する</code
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>AC-06</td>
+                <td>
+                  画面: <code>未完了のみのとき最後のステータスを解除できない</code>、<code
+                    >完了のみのとき最後のステータスを解除できない</code
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>AC-07</td>
+                <td>
+                  画面:
+                  <code>編集したタイトルを再読み込み後も表示する</code
+                  >、<code>空のタイトルを追加すると入力エラーを表示する</code>、<code>タスク作成で500が返ると保存エラーを表示する</code>、<code>タイトル編集で500が返ると保存エラーを表示する</code>、<code
+                    >完了状態の保存で500が返るとエラーを表示し状態を維持する</code
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>AC-08</td>
+                <td>
+                  API: <code>真偽値以外の完了状態を400で拒否する</code>、<code
+                    >不正なID %s の更新に404を返す</code
+                  >、<code>更新時に不正なJSONを400で拒否する</code>、<code
+                    >想定外のDB障害には500を返す</code
+                  >
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h3><a href="title-search.md">タイトル検索</a></h3>
+        <div class="table">
+          <table>
+            <tbody>
+              <tr>
+                <td>受け入れ条件</td>
+                <td>対応するテスト</td>
+              </tr>
+              <tr>
+                <td>AC-01、AC-02、AC-05</td>
+                <td>
+                  画面:
+                  <code
+                    >タイトル検索に入力すると大小文字を区別せず部分一致するタスクだけを表示し、消去すると一覧に戻る</code
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>AC-03</td>
+                <td>
+                  画面:
+                  <code
+                    >検索中にステータスを選択するとタイトルとステータスの両方に一致するタスクを表示する</code
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>AC-04</td>
+                <td>
+                  画面:
+                  <code
+                    >検索中にタスクのタイトルを編集すると保存結果が現在の検索条件に反映される</code
+                  >、<code>検索中にタスクを追加し完了すると現在の検索とステータスの条件が一覧に反映される</code>、<code
+                    >空のタイトルを追加すると入力エラーを表示する</code
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>AC-06</td>
+                <td>
+                  単体:
+                  <code>検索語の前後に空白があると除去した語でタイトルに一致する</code
+                  >、<code>空文字または空白だけの検索語ではすべてのタイトルに一致する</code>。画面:
+                  <code
+                    >検索中に再読み込みすると検索語が空になり保存済みタスクを一覧に表示する</code
+                  >
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h3><a href="task-deletion.md">タスク削除</a></h3>
+        <div class="table">
+          <table>
+            <tbody>
+              <tr>
+                <td>受け入れ条件</td>
+                <td>対応するテスト</td>
+              </tr>
+              <tr>
+                <td>AC-01</td>
+                <td>
+                  画面:
+                  <code>確認を了承すると対象タスクだけ削除され再読み込み後も残らない</code>、<code
+                    >完了タスクを一覧から削除すると再読み込み後も表示されない</code
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>AC-02</td>
+                <td>画面: <code>削除確認をキャンセルすると対象タスクが一覧に残る</code></td>
+              </tr>
+              <tr>
+                <td>AC-03</td>
+                <td>
+                  API:
+                  <code>削除したタスクは同じMySQLへ再接続した一覧に現れず、他のタスクは残る</code
+                  >。画面: <code>確認を了承すると対象タスクだけ削除され再読み込み後も残らない</code>
+                </td>
+              </tr>
+              <tr>
+                <td>AC-04</td>
+                <td>画面: <code>削除APIが失敗するとエラーを表示し対象タスクを維持する</code></td>
+              </tr>
+              <tr>
+                <td>AC-05</td>
+                <td>API: <code>存在しないか不正なID %s の削除に404を返す</code></td>
+              </tr>
+              <tr>
+                <td>AC-06</td>
+                <td>
+                  上記の完了と検索、および画面の
+                  <code>編集したタイトルを再読み込み後も表示する</code> などの既存テスト
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h3><a href="mysql-migration.md">MySQLへの変更</a></h3>
+        <div class="table">
+          <table>
+            <tbody>
+              <tr>
+                <td>受け入れ条件</td>
+                <td>対応するテストと未確認の範囲</td>
+              </tr>
+              <tr>
+                <td>AC-01</td>
+                <td>
+                  APIと画面テストはMySQLを使用する。Composeの起動と接続先設定を直接検証するテストは未確認。
+                </td>
+              </tr>
+              <tr>
+                <td>AC-02</td>
+                <td>
+                  API:
+                  <code>新規タスクを未完了で作成する</code
+                  >、<code>MySQLへの接続を開き直しても更新済みタイトルを一覧に表示する</code>、<code
+                    >削除したタスクは同じMySQLへ再接続した一覧に現れず、他のタスクは残る</code
+                  >
+                  など。完了と削除の対応も参照。
+                </td>
+              </tr>
+              <tr>
+                <td>AC-03</td>
+                <td>
+                  API:
+                  <code>%sへの変更をMySQLへの再接続後も保持する</code
+                  >、<code>MySQLへの接続を開き直しても更新済みタイトルを一覧に表示する</code>。APIサーバープロセスの再起動は未確認。
+                </td>
+              </tr>
+              <tr>
+                <td>AC-04</td>
+                <td>
+                  APIとE2Eのテスト用MySQLは実行スクリプトで用意される。分離そのものを検証するテストは未確認。
+                </td>
+              </tr>
+              <tr>
+                <td>AC-05</td>
+                <td>
+                  <a href="../README.md">README</a>
+                  に手順を記載。文書の内容を検証するテストは未確認。
+                </td>
+              </tr>
+              <tr>
+                <td>AC-06</td>
+                <td>SQLiteデータを取り込まないことを直接検証するテストは未確認。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h3><a href="due-date.md">期限の追加</a></h3>
+        <p>
+          過去の試行用課題であり、現行の実装には取り込まれていません。対応するテストはありません。
+        </p>
+        <h3><a href="review-report.md">レビュー用HTMLの汎用化</a></h3>
+        <div class="table">
+          <table>
+            <tbody>
+              <tr>
+                <td>受け入れ条件</td>
+                <td>対応するテストと未確認の範囲</td>
+              </tr>
+              <tr>
+                <td>AC-01</td>
+                <td>
+                  <a href="../tests/viewer/report.test.mjs">レポートテスト</a>:
+                  <code>評価と修正を結び付けるとHTMLに指摘と未確認を表示する</code
+                  >。期限以外の架空データでHTMLを生成する。
+                </td>
+              </tr>
+              <tr>
+                <td>AC-02</td>
+                <td>
+                  レポートテスト:
+                  <code>テストのない仕様を成功と記録するとレポート作成を拒否する</code>、<code
+                    >未実施のテストを持つ仕様を成功と記録するとレポート作成を拒否する</code
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>AC-03</td>
+                <td>
+                  レポートテスト:
+                  <code>候補の異なる動画を指定するとレポート作成を拒否する</code
+                  >、<code>動画の種類と未取得理由を省略するとレポート作成を拒否する</code>。2本の実動画の埋め込みを自動テストするケースは未確認。
+                </td>
+              </tr>
+              <tr>
+                <td>AC-04</td>
+                <td>
+                  タイトル検索のシナリオを専用MySQLで実行し、通常版と注釈付き動画を撮影した。レポートテスト:
+                  <code>既存の動画出力先を指定すると前回の記録を残して撮影を拒否する</code>
+                </td>
+              </tr>
+              <tr>
+                <td>AC-05</td>
+                <td>
+                  レポートテスト:
+                  <code>修正前の候補の指摘と修正後の再評価を表示する</code
+                  >、<code>存在しない指摘に修正を対応付けるとレポート作成を拒否する</code>、<code
+                    >異なる候補の評価を渡すとレポート作成を拒否する</code
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>AC-06</td>
+                <td>
+                  <a href="../viewer/README.md">ビューアーのREADME</a>と<a
+                    href="../viewer/FORMAT.md"
+                    >入力形式</a
+                  >に記載。文書内容の自動テストは未確認。
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <hr />
+      <small
+        >仕様または対応表を更新したら、リポジトリのルートで node tasks/build-index.mjs
+        を実行してください。</small
+      >
+    </main>
+    <script>
+      function reveal() {
+        const target = document.getElementById(location.hash.slice(1));
+        if (target?.tagName === "DETAILS") target.open = true;
+      }
+      addEventListener("hashchange", reveal);
+      reveal();
+    </script>
+  </body>
+</html>
