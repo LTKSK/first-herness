@@ -1,2 +1,4 @@
 import { defineConfig } from "vitest/config";
-export default defineConfig({ test: { include: ["tests/api/**/*.test.ts"] } });
+export default defineConfig({
+  test: { include: ["tests/api/**/*.test.ts", "tests/unit/**/*.test.ts"] },
+});
