@@ -4,13 +4,16 @@ AIエージェントの実装と評価を学ぶための題材アプリです。
 
 ## 必要な環境
 
-- Node.js 22.13以上（Node.jsの組み込み `node:sqlite` を使用。実験的機能の警告が表示されます）
+- Node.js 26.13.1（Node.jsの組み込み `node:sqlite` を使用）
 - npm
 - E2EテストにはPlaywrightのChromiumと、そのOS依存ライブラリ
 
-クリーンなチェックアウトで以下を実行します。
+nvmを使う場合は、クリーンなチェックアウトで以下を実行します。
 
 ```sh
+nvm install 26.13.1
+nvm use 26.13.1
+node --version
 npm ci
 npx playwright install chromium
 # LinuxでブラウザーのOS依存ライブラリが不足する場合:
