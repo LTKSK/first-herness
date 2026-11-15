@@ -1,0 +1,10 @@
+{
+  "exampleOnly": true,
+  "formatVersion": 1,
+  "recordType": "revision",
+  "id": "revision-example-001",
+  "targetId": "candidate-example-001",
+  "findingIds": ["finding-example-001"],
+  "summary": "テストを振る舞いごとに分割した例です。",
+  "reevaluationId": "eval-example-002"
+}

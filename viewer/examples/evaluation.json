@@ -1,0 +1,18 @@
+{
+  "exampleOnly": true,
+  "formatVersion": 1,
+  "recordType": "evaluation",
+  "id": "eval-example-001",
+  "targetId": "candidate-example-001",
+  "type": "code_quality",
+  "result": "fail",
+  "summary": "テストの責務を確認する例です。",
+  "findings": [
+    {
+      "id": "finding-example-001",
+      "summary": "1つのテストが複数の振る舞いを確認している。",
+      "evidence": "tests/example.test.ts: example test",
+      "recommendation": "振る舞いごとにテストを分ける。"
+    }
+  ]
+}
