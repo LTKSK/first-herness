@@ -1,3 +1,6 @@
+import { spawn, type ChildProcess } from "node:child_process";
+import { once } from "node:events";
+import { createServer } from "node:net";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Pool } from "mysql2/promise";
 import { createApp } from "../../backend/src/app.ts";
@@ -242,6 +245,17 @@ describe("期限", () => {
     });
     expect(await cleared.json()).toMatchObject({ dueDate: null });
   });
+  it("400で割り切れる世紀年のうるう日を期限として保存する", async () => {
+    const app = createApp(db);
+    const result = await app.request("/api/tasks", {
+      method: "POST",
+      body: JSON.stringify({ title: "期限", dueDate: "2000-02-29" }),
+    });
+    expect(result.status).toBe(201);
+    expect(await (await app.request("/api/tasks")).json()).toMatchObject([
+      { dueDate: "2000-02-29" },
+    ]);
+  });
   it("作成時に指定した期限を一覧APIで返す", async () => {
     const app = createApp(db);
     const result = await app.request("/api/tasks", {
@@ -253,24 +267,32 @@ describe("期限", () => {
       { dueDate: "2030-12-31" },
     ]);
   });
-  it.each(["2023-02-29", "2024-04-31", "2024-13-01", "2024-1-01", "0000-01-01", "", 1, true, {}])(
-    "作成と更新で不正な期限 %j を400で拒否する",
-    async (dueDate) => {
-      const app = createApp(db);
-      expect(
-        (
-          await app.request("/api/tasks", {
-            method: "POST",
-            body: JSON.stringify({ title: "期限", dueDate }),
-          })
-        ).status,
-      ).toBe(400);
-      expect(
-        (await app.request("/api/tasks/1", { method: "PATCH", body: JSON.stringify({ dueDate }) }))
-          .status,
-      ).toBe(400);
-    },
-  );
+  it.each([
+    "2023-02-29",
+    "1900-02-29",
+    "2024-04-31",
+    "2024-13-01",
+    "2024-1-01",
+    "0000-01-01",
+    "",
+    1,
+    true,
+    {},
+  ])("作成と更新で不正な期限 %j を400で拒否する", async (dueDate) => {
+    const app = createApp(db);
+    expect(
+      (
+        await app.request("/api/tasks", {
+          method: "POST",
+          body: JSON.stringify({ title: "期限", dueDate }),
+        })
+      ).status,
+    ).toBe(400);
+    expect(
+      (await app.request("/api/tasks/1", { method: "PATCH", body: JSON.stringify({ dueDate }) }))
+        .status,
+    ).toBe(400);
+  });
   it("期限列のない既存MySQLテーブルのタスクを保持して未設定の期限を追加する", async () => {
     await db.execute("ALTER TABLE tasks DROP COLUMN due_date");
     await db.execute("INSERT INTO tasks (title, completed) VALUES (?, ?)", ["既存", true]);
@@ -280,4 +302,49 @@ describe("期限", () => {
       { id: 1, title: "既存", completed: true, dueDate: null },
     ]);
   });
+});
+
+it("期限を保存後、同じMySQLでAPIプロセスを再起動すると一覧に期限が残る", async () => {
+  const socket = createServer();
+  socket.listen(0, "127.0.0.1");
+  await once(socket, "listening");
+  const address = socket.address();
+  if (!address || typeof address === "string") throw new Error("No port");
+  const port = address.port;
+  await new Promise<void>((resolve, reject) =>
+    socket.close((error) => (error ? reject(error) : resolve())),
+  );
+  const url = `http://127.0.0.1:${port}/api/tasks`;
+  async function start(): Promise<ChildProcess> {
+    const child = spawn(process.execPath, ["--import", "tsx", "backend/src/server.ts"], {
+      env: { ...process.env, PORT: String(port) },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    await new Promise<void>((resolve, reject) => {
+      child.stdout!.once("data", () => resolve());
+      child.once("error", reject);
+      child.once("exit", (code) => reject(new Error(`API exited: ${code}`)));
+    });
+    return child;
+  }
+  let child = await start();
+  try {
+    const created = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "再起動", dueDate: "2030-01-02" }),
+    });
+    expect(created.status).toBe(201);
+    const stopped = once(child, "exit");
+    child.kill("SIGTERM");
+    await stopped;
+    child = await start();
+    expect(await (await fetch(url)).json()).toMatchObject([
+      { title: "再起動", dueDate: "2030-01-02" },
+    ]);
+  } finally {
+    const stopped = once(child, "exit");
+    child.kill("SIGTERM");
+    await stopped;
+  }
 });
