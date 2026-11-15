@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import { matchesTitle } from "./search";
 
-type Task = { id: number; title: string; completed: boolean };
+type Task = { id: number; title: string; completed: boolean; dueDate: string | null };
 
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [title, setTitle] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [draftDueDate, setDraftDueDate] = useState("");
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<number | null>(null);
   const [draft, setDraft] = useState("");
@@ -33,7 +35,7 @@ export default function App() {
     return () => controller.abort();
   }, []);
 
-  async function save(value: string, id?: number) {
+  async function save(value: string, date: string, id?: number) {
     if (!value.trim()) {
       setError("タイトルを入力してください。");
       return;
@@ -44,7 +46,7 @@ export default function App() {
       const response = await fetch(id === undefined ? "/api/tasks" : `/api/tasks/${id}`, {
         method: id === undefined ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: value }),
+        body: JSON.stringify({ title: value, dueDate: date || null }),
       });
       if (!response.ok) throw new Error();
       const task = (await response.json()) as Task;
@@ -54,6 +56,7 @@ export default function App() {
           : current.map((item) => (item.id === id ? task : item)),
       );
       setTitle("");
+      setDueDate("");
       setEditing(null);
     } catch {
       setError("保存に失敗しました。もう一度お試しください。");
@@ -108,9 +111,16 @@ export default function App() {
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            void save(title);
+            void save(title, dueDate);
           }}
         >
+          <label htmlFor="new-due">期限（任意）</label>
+          <input
+            id="new-due"
+            type="date"
+            value={dueDate}
+            onChange={(event) => setDueDate(event.target.value)}
+          />
           <label htmlFor="new-title">タイトル</label>
           <div className="row">
             <input
@@ -182,7 +192,7 @@ export default function App() {
                     className="edit"
                     onSubmit={(event) => {
                       event.preventDefault();
-                      void save(draft, task.id);
+                      void save(draft, draftDueDate, task.id);
                     }}
                   >
                     <label className="sr-only" htmlFor={`edit-${task.id}`}>
@@ -192,6 +202,13 @@ export default function App() {
                       id={`edit-${task.id}`}
                       value={draft}
                       onChange={(event) => setDraft(event.target.value)}
+                    />
+                    <label htmlFor={`due-${task.id}`}>期限を編集</label>
+                    <input
+                      id={`due-${task.id}`}
+                      type="date"
+                      value={draftDueDate}
+                      onChange={(event) => setDraftDueDate(event.target.value)}
                     />
                     <button disabled={busy}>保存</button>
                     <button className="secondary" type="button" onClick={() => setEditing(null)}>
@@ -212,6 +229,7 @@ export default function App() {
                         {task.completed ? "完了" : "未完了"}
                       </label>
                       <span>{task.title}</span>
+                      <span>期限: {task.dueDate ?? "なし"}</span>
                     </div>
                     <button
                       className="secondary"
@@ -219,6 +237,7 @@ export default function App() {
                       onClick={() => {
                         setEditing(task.id);
                         setDraft(task.title);
+                        setDraftDueDate(task.dueDate ?? "");
                         setError("");
                       }}
                     >

@@ -7,6 +7,7 @@ const entries = [
   ["task-deletion.md", "タスク削除", "草案（最終レビュー待ち）", "実装済み"],
   ["mysql-migration.md", "MySQLへの変更", "草案", "実装済み"],
   ["due-date.md", "期限の追加", "過去の試行用課題", "未実装"],
+  ["due-date-current.md", "期限設定（現行ベースライン）", "確定", "実装済み"],
   ["review-report.md", "レビュー用HTMLの汎用化", "確定", "実装済み"],
 ];
 const dir = new URL("./", import.meta.url);

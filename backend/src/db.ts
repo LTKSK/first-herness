@@ -8,6 +8,7 @@ export function createDatabase() {
     password: process.env.MYSQL_PASSWORD ?? "tasks",
     database: process.env.MYSQL_DATABASE ?? "tasks",
     charset: "utf8mb4",
+    dateStrings: true,
   });
 }
 
@@ -17,4 +18,16 @@ export async function initializeDatabase(db: mysql.Pool) {
     title LONGTEXT NOT NULL,
     completed BOOLEAN NOT NULL DEFAULT FALSE
   ) CHARACTER SET utf8mb4`);
+  const [columns] = await db.query<mysql.RowDataPacket[]>(
+    "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+    ["tasks", "due_date"],
+  );
+  if (columns.length === 0) {
+    try {
+      await db.execute("ALTER TABLE tasks ADD COLUMN due_date VARCHAR(10) NULL DEFAULT NULL");
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "ER_DUP_FIELDNAME"))
+        throw error;
+    }
+  }
 }

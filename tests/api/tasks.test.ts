@@ -37,7 +37,12 @@ describe("タスクAPI", () => {
       body: JSON.stringify({ title: " updated " }),
     });
     expect(updated.status).toBe(200);
-    expect(await updated.json()).toEqual({ id: task.id, title: "updated", completed: false });
+    expect(await updated.json()).toEqual({
+      id: task.id,
+      title: "updated",
+      completed: false,
+      dueDate: null,
+    });
   });
   it("MySQLへの接続を開き直しても更新済みタイトルを一覧に表示する", async () => {
     let app = createApp(db);
@@ -55,7 +60,9 @@ describe("タスクAPI", () => {
     app = createApp(db);
     const list = await app.request("/api/tasks");
     expect(list.status).toBe(200);
-    expect(await list.json()).toEqual([{ id: task.id, title: "updated", completed: false }]);
+    expect(await list.json()).toEqual([
+      { id: task.id, title: "updated", completed: false, dueDate: null },
+    ]);
   });
   it.each([
     ["空白のみのタイトル", '{"title":"  "}'],
@@ -113,7 +120,7 @@ describe("完了状態", () => {
     db = createDatabase();
     app = createApp(db);
     expect(await (await app.request("/api/tasks")).json()).toEqual([
-      { id: 1, title: "task", completed },
+      { id: 1, title: "task", completed, dueDate: null },
     ]);
   });
   it("真偽値以外の完了状態を400で拒否する", async () => {
@@ -166,7 +173,7 @@ describe("タスクの削除", () => {
     db = createDatabase();
     app = createApp(db);
     expect(await (await app.request("/api/tasks")).json()).toEqual([
-      { id: 2, title: "残す", completed: false },
+      { id: 2, title: "残す", completed: false, dueDate: null },
     ]);
   });
   it.each(["999", "0", "-1", "1.5", "9007199254740992", "abc"])(
@@ -198,6 +205,79 @@ it("タイトルと完了状態を並行更新しても両方を保持する", a
   ]);
   expect(results.map((response) => response.status)).toEqual([200, 200]);
   expect(await (await app.request("/api/tasks")).json()).toEqual([
-    { id: 1, title: "after", completed: true },
+    { id: 1, title: "after", completed: true, dueDate: null },
   ]);
+});
+
+describe("期限", () => {
+  it("期限の省略は未設定になり、設定した期限は別の項目の更新とMySQL再接続後も保持される", async () => {
+    let app = createApp(db);
+    const created = await app.request("/api/tasks", {
+      method: "POST",
+      body: JSON.stringify({ title: "期限" }),
+    });
+    expect(await created.json()).toMatchObject({ dueDate: null });
+    expect(
+      (
+        await app.request("/api/tasks/1", {
+          method: "PATCH",
+          body: JSON.stringify({ dueDate: "2024-02-29" }),
+        })
+      ).status,
+    ).toBe(200);
+    await app.request("/api/tasks/1", {
+      method: "PATCH",
+      body: JSON.stringify({ completed: true }),
+    });
+    await db.end();
+    db = createDatabase();
+    await initializeDatabase(db);
+    app = createApp(db);
+    expect(await (await app.request("/api/tasks")).json()).toEqual([
+      { id: 1, title: "期限", completed: true, dueDate: "2024-02-29" },
+    ]);
+    const cleared = await app.request("/api/tasks/1", {
+      method: "PATCH",
+      body: JSON.stringify({ dueDate: null }),
+    });
+    expect(await cleared.json()).toMatchObject({ dueDate: null });
+  });
+  it("作成時に指定した期限を一覧APIで返す", async () => {
+    const app = createApp(db);
+    const result = await app.request("/api/tasks", {
+      method: "POST",
+      body: JSON.stringify({ title: "期限", dueDate: "2030-12-31" }),
+    });
+    expect(await result.json()).toMatchObject({ dueDate: "2030-12-31" });
+    expect(await (await app.request("/api/tasks")).json()).toMatchObject([
+      { dueDate: "2030-12-31" },
+    ]);
+  });
+  it.each(["2023-02-29", "2024-04-31", "2024-13-01", "2024-1-01", "0000-01-01", "", 1, true, {}])(
+    "作成と更新で不正な期限 %j を400で拒否する",
+    async (dueDate) => {
+      const app = createApp(db);
+      expect(
+        (
+          await app.request("/api/tasks", {
+            method: "POST",
+            body: JSON.stringify({ title: "期限", dueDate }),
+          })
+        ).status,
+      ).toBe(400);
+      expect(
+        (await app.request("/api/tasks/1", { method: "PATCH", body: JSON.stringify({ dueDate }) }))
+          .status,
+      ).toBe(400);
+    },
+  );
+  it("期限列のない既存MySQLテーブルのタスクを保持して未設定の期限を追加する", async () => {
+    await db.execute("ALTER TABLE tasks DROP COLUMN due_date");
+    await db.execute("INSERT INTO tasks (title, completed) VALUES (?, ?)", ["既存", true]);
+    await initializeDatabase(db);
+    await initializeDatabase(db);
+    expect(await (await createApp(db).request("/api/tasks")).json()).toEqual([
+      { id: 1, title: "既存", completed: true, dueDate: null },
+    ]);
+  });
 });
