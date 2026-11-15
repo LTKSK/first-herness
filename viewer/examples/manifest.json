@@ -6,11 +6,6 @@
   "candidate": "candidate-example-001",
   "videos": [
     {
-      "title": "機能の操作",
-      "reason": "架空の例のため撮影していません。",
-      "kind": "feature"
-    },
-    {
       "title": "仕様とチェックの注釈",
       "reason": "架空の例のため撮影していません。",
       "kind": "annotated"

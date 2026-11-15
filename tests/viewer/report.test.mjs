@@ -15,10 +15,7 @@ async function fixture(t) {
     baseline: "base",
     candidate: "candidate",
     candidateVersions: ["candidate"],
-    videos: [
-      { kind: "feature", title: "通常", reason: "未撮影" },
-      { kind: "annotated", title: "注釈", reason: "未撮影" },
-    ],
+    videos: [{ kind: "annotated", title: "注釈", reason: "未撮影" }],
     requirements: [{ id: "AC-01", description: "検索できる", result: "unknown", checks: [] }],
     evaluationFiles: ["evaluation.json"],
     revisionFiles: ["revision.json"],
@@ -103,7 +100,7 @@ test("存在しない指摘に修正を対応付けるとレポート作成を�
 test("候補の異なる動画を指定するとレポート作成を拒否する", async (t) => {
   const f = await fixture(t);
   f.manifest.videos[0] = {
-    kind: "feature",
+    kind: "annotated",
     title: "通常",
     path: "feature.webm",
     targetId: "other",
@@ -147,13 +144,13 @@ test("修正前の候補の指摘と修正後の再評価を表示する", async
   assert.match(await readFile(join(f.dir, "index.html"), "utf8"), /再評価: eval-2/);
 });
 
-test("動画の種類と未取得理由を省略するとレポート作成を拒否する", async (t) => {
+test("動画の記録を省略するとレポート作成を拒否する", async (t) => {
   const f = await fixture(t);
   f.manifest.videos = [];
   await f.save();
   const result = f.run();
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /feature and one annotated/);
+  assert.match(result.stderr, /one annotated or comparison/);
 });
 
 test("未実施のテストを持つ仕様を成功と記録するとレポート作成を拒否する", async (t) => {
@@ -202,4 +199,106 @@ test("既存の動画出力先を指定すると前回の記録を残して撮�
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /EEXIST/);
   assert.equal(await readFile(join(output, "videos.json"), "utf8"), "previous");
+});
+
+test("新旧の動画を左右に並べた1本の動画としてHTMLに表示する", async (t) => {
+  const f = await fixture(t);
+  for (const [name, color, duration] of [
+    ["before", "blue", 1],
+    ["after", "red", 2],
+  ]) {
+    const result = spawnSync(
+      "ffmpeg",
+      [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        `color=c=${color}:s=160x120:r=5:d=${duration}`,
+        "-c:v",
+        "libvpx-vp9",
+        join(f.dir, `${name}.webm`),
+      ],
+      { encoding: "utf8" },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    await writeFile(
+      join(f.dir, `${name}.json`),
+      JSON.stringify({
+        candidate: name,
+        videos: [{ kind: "annotated", targetId: name, path: `${name}.webm` }],
+      }),
+    );
+  }
+  const output = join(f.dir, "combined");
+  const compare = spawnSync(
+    process.execPath,
+    [
+      resolve("viewer/compare-videos.mjs"),
+      join(f.dir, "before.json"),
+      join(f.dir, "after.json"),
+      output,
+    ],
+    { encoding: "utf8" },
+  );
+  assert.equal(compare.status, 0, compare.stderr);
+  const probe = spawnSync(
+    "ffprobe",
+    [
+      "-v",
+      "error",
+      "-show_entries",
+      "stream=width,height",
+      "-show_entries",
+      "format=duration",
+      "-of",
+      "json",
+      join(output, "comparison.webm"),
+    ],
+    { encoding: "utf8" },
+  );
+  assert.equal(probe.status, 0, probe.stderr);
+  const info = JSON.parse(probe.stdout);
+  assert.equal(info.streams[0].width, 1920);
+  assert.ok(Number(info.format.duration) >= 1.9);
+  const video = JSON.parse(await readFile(join(output, "videos.json"), "utf8")).videos[0];
+  f.manifest.baseline = "before";
+  f.manifest.candidate = "after";
+  f.manifest.candidateVersions = ["after"];
+  f.evaluation.targetId = "after";
+  f.revision.fromTargetId = "after";
+  f.revision.targetId = "after";
+  video.path = "combined/comparison.webm";
+  f.manifest.videos = [video];
+  await f.save();
+  const prepared = f.run();
+  assert.equal(prepared.status, 0, prepared.stderr);
+  const built = spawnSync(
+    process.execPath,
+    [resolve("viewer/build.mjs"), join(f.dir, "report.json"), join(f.dir, "index.html")],
+    { encoding: "utf8" },
+  );
+  assert.equal(built.status, 0, built.stderr);
+  const html = await readFile(join(f.dir, "index.html"), "utf8");
+  assert.equal((html.match(/<video\b/g) || []).length, 1);
+  assert.match(html, /data:video\/webm;base64,/);
+});
+
+test("比較動画の変更前IDが基準と異なるとレポート作成を拒否する", async (t) => {
+  const f = await fixture(t);
+  f.manifest.videos = [
+    {
+      kind: "comparison",
+      title: "比較",
+      path: "comparison.webm",
+      baselineId: "other",
+      targetId: "candidate",
+    },
+  ];
+  await f.save();
+  const result = f.run();
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /baseline mismatch/);
 });

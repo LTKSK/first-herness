@@ -8,6 +8,7 @@ AIエージェントの実装と評価を学ぶための題材アプリです。
 - npm
 - Docker Engine と Docker Compose
 - E2EテストにはPlaywrightのChromiumと、そのOS依存ライブラリ
+- レポートのテストと比較動画の生成にはFFmpegとffprobe
 
 nvmを使う場合は、クリーンなチェックアウトで以下を実行します。
 

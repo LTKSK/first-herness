@@ -29,7 +29,7 @@ try {
   if (!environment?.url || typeof environment.stop !== "function")
     throw new Error("start must return url and stop");
   browser = await chromium.launch({ headless: true, slowMo: 250 });
-  for (const annotated of [false, true]) {
+  for (const annotated of [true]) {
     const context = await browser.newContext({
       viewport: { width: 1200, height: 820 },
       recordVideo: { dir: temp, size: { width: 1200, height: 820 } },
@@ -67,7 +67,7 @@ try {
       await context.close();
     }
     if (!video) throw new Error("Video was not created");
-    await video.saveAs(join(output, annotated ? "annotated.webm" : "feature.webm"));
+    await video.saveAs(join(output, "annotated.webm"));
   }
   await writeFile(
     join(output, "videos.json"),
@@ -75,7 +75,6 @@ try {
       {
         candidate,
         videos: [
-          { kind: "feature", title: "機能の操作", path: "feature.webm", targetId: candidate },
           {
             kind: "annotated",
             title: "仕様とチェックの注釈",

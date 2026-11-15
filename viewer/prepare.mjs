@@ -98,16 +98,14 @@ for (const req of requirements) {
     throw new Error(`Unverified requirement cannot pass: ${req.id}`);
 }
 const videos = array(source.videos, "videos");
-if (
-  videos.filter((v) => v.kind === "feature").length !== 1 ||
-  videos.filter((v) => v.kind === "annotated").length !== 1 ||
-  videos.length !== 2
-)
+if (videos.length !== 1 || !["annotated", "comparison"].includes(videos[0].kind))
   throw new Error(
-    "Exactly one feature and one annotated video are required, with reasons if missing",
+    "Exactly one annotated or comparison video is required, with a reason if missing",
   );
 for (const v of videos) {
   requireText(v.title, "video title");
+  if (v.kind === "comparison" && v.baselineId !== source.baseline)
+    throw new Error("Comparison baseline mismatch");
   if (v.path) {
     if (v.targetId !== source.candidate) throw new Error(`Video candidate mismatch: ${v.title}`);
     v.path = relative(dirname(output), resolve(base, v.path));
