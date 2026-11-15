@@ -228,3 +228,73 @@ test("検索中にタスクを追加し完了すると現在の検索とステ�
   await page.getByRole("checkbox", { name: "完了", exact: true }).check();
   await expect(page.getByText(title, { exact: true })).toBeVisible();
 });
+
+test("確認を了承すると対象タスクだけ削除され再読み込み後も残らない", async ({ page }) => {
+  await page.goto("/");
+  const title = `削除対象 ${Date.now()}`;
+  const other = `残す対象 ${Date.now()}`;
+  await addTask(page, title);
+  await addTask(page, other);
+  page.once("dialog", (dialog) => dialog.accept());
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: title })
+    .getByRole("button", { name: "削除" })
+    .click();
+  await expect(page.getByText(title, { exact: true })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText(title, { exact: true })).toHaveCount(0);
+  await expect(page.getByText(other, { exact: true })).toBeVisible();
+});
+
+test("削除確認をキャンセルすると対象タスクが一覧に残る", async ({ page }) => {
+  await page.goto("/");
+  const title = `キャンセル対象 ${Date.now()}`;
+  await addTask(page, title);
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: title })
+    .getByRole("button", { name: "削除" })
+    .click();
+  await page.reload();
+  await expect(page.getByText(title, { exact: true })).toBeVisible();
+});
+
+test("削除APIが失敗するとエラーを表示し対象タスクを維持する", async ({ page }) => {
+  await page.goto("/");
+  const title = `削除失敗 ${Date.now()}`;
+  await addTask(page, title);
+  await page.route("**/api/tasks/*", async (route) => {
+    if (route.request().method() === "DELETE") await route.fulfill({ status: 500 });
+    else await route.continue();
+  });
+  page.once("dialog", (dialog) => dialog.accept());
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: title })
+    .getByRole("button", { name: "削除" })
+    .click();
+  await expect(page.getByRole("alert")).toContainText("削除に失敗しました");
+  await expect(page.getByText(title, { exact: true })).toBeVisible();
+});
+
+test("完了タスクを一覧から削除すると再読み込み後も表示されない", async ({ page }) => {
+  await page.goto("/");
+  const title = `完了後に削除 ${Date.now()}`;
+  await addTask(page, title);
+  await page.getByRole("checkbox", { name: `${title}を完了`, exact: true }).click();
+  await page.getByRole("checkbox", { name: "完了", exact: true }).check();
+  await expect(page.getByText(title, { exact: true })).toBeVisible();
+  const deleteButton = page
+    .getByRole("listitem")
+    .filter({ hasText: title })
+    .getByRole("button", { name: "削除" });
+  await expect(deleteButton).toBeEnabled();
+  page.once("dialog", (dialog) => dialog.accept());
+  await deleteButton.click();
+  await expect(page.getByText(title, { exact: true })).toHaveCount(0);
+  await page.reload();
+  await page.getByRole("checkbox", { name: "完了", exact: true }).check();
+  await expect(page.getByText(title, { exact: true })).toHaveCount(0);
+});

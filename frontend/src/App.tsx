@@ -81,6 +81,21 @@ export default function App() {
     }
   }
 
+  async function deleteTask(task: Task) {
+    if (!window.confirm(`「${task.title}」を削除しますか？`)) return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error();
+      setTasks((current) => current.filter((item) => item.id !== task.id));
+    } catch {
+      setError("削除に失敗しました。もう一度お試しください。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <main>
       <header>
@@ -208,6 +223,14 @@ export default function App() {
                       }}
                     >
                       編集
+                    </button>
+                    <button
+                      className="secondary"
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void deleteTask(task)}
+                    >
+                      削除
                     </button>
                   </>
                 )}

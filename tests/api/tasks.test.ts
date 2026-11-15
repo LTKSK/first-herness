@@ -185,3 +185,25 @@ it("想定外のDB障害には500を返す", async () => {
     db = new DatabaseSync(join(directory, "test.sqlite"));
   }
 });
+
+describe("タスクの削除", () => {
+  it("削除したタスクは同じDBを開き直した一覧に現れず、他のタスクは残る", async () => {
+    let app = createApp(db);
+    await app.request("/api/tasks", { method: "POST", body: JSON.stringify({ title: "削除" }) });
+    await app.request("/api/tasks", { method: "POST", body: JSON.stringify({ title: "残す" }) });
+    expect((await app.request("/api/tasks/1", { method: "DELETE" })).status).toBe(204);
+    db.close();
+    db = new DatabaseSync(join(directory, "test.sqlite"));
+    app = createApp(db);
+    expect(await (await app.request("/api/tasks")).json()).toEqual([
+      { id: 2, title: "残す", completed: false },
+    ]);
+  });
+  it.each(["999", "0", "-1", "1.5", "9007199254740992", "abc"])(
+    "存在しないか不正なID %s の削除に404を返す",
+    async (id) => {
+      const app = createApp(db);
+      expect((await app.request(`/api/tasks/${id}`, { method: "DELETE" })).status).toBe(404);
+    },
+  );
+});

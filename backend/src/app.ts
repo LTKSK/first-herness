@@ -76,5 +76,13 @@ export function createApp(db: DatabaseSync) {
     );
     return c.json({ id: Number(id), title, completed: Boolean(completed) });
   });
+  app.delete("/api/tasks/:id", (c) => {
+    const id = c.req.param("id");
+    if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id)))
+      return c.json({ error: "タスクが見つかりません" }, 404);
+    const result = db.prepare("DELETE FROM tasks WHERE id = ?").run(Number(id));
+    if (result.changes === 0) return c.json({ error: "タスクが見つかりません" }, 404);
+    return c.body(null, 204);
+  });
   return app;
 }
