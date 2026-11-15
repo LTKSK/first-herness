@@ -11,14 +11,15 @@
     "lint": "oxlint",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test": "node scripts/test-mysql.mjs vitest",
+    "test:e2e": "node scripts/test-mysql.mjs playwright",
     "preview": "vite preview",
     "test:hooks": "node --test tests/hooks/*.test.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.8",
     "hono": "^4.13.18",
+    "mysql2": "^3.24.6",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

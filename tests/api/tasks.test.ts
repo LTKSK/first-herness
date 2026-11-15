@@ -1,19 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { DatabaseSync } from "node:sqlite";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import type { Pool } from "mysql2/promise";
 import { createApp } from "../../backend/src/app.ts";
+import { createDatabase, initializeDatabase } from "../../backend/src/db.ts";
 
-let db: DatabaseSync;
-let directory: string;
-beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), "harness-api-"));
-  db = new DatabaseSync(join(directory, "test.sqlite"));
+let db: Pool;
+beforeEach(async () => {
+  db = createDatabase();
+  await initializeDatabase(db);
+  await db.execute("TRUNCATE TABLE tasks");
 });
-afterEach(() => {
-  db.close();
-  rmSync(directory, { recursive: true, force: true });
+afterEach(async () => {
+  await db.end();
 });
 
 describe("タスクAPI", () => {
@@ -42,7 +39,7 @@ describe("タスクAPI", () => {
     expect(updated.status).toBe(200);
     expect(await updated.json()).toEqual({ id: task.id, title: "updated", completed: false });
   });
-  it("DBを開き直しても更新済みタイトルを一覧に表示する", async () => {
+  it("MySQLへの接続を開き直しても更新済みタイトルを一覧に表示する", async () => {
     let app = createApp(db);
     const created = await app.request("/api/tasks", {
       method: "POST",
@@ -53,8 +50,8 @@ describe("タスクAPI", () => {
       method: "PATCH",
       body: JSON.stringify({ title: " updated " }),
     });
-    db.close();
-    db = new DatabaseSync(join(directory, "test.sqlite"));
+    await db.end();
+    db = createDatabase();
     app = createApp(db);
     const list = await app.request("/api/tasks");
     expect(list.status).toBe(200);
@@ -93,15 +90,6 @@ describe("タスクAPI", () => {
 });
 
 describe("完了状態", () => {
-  it("旧DBのIDとタイトルを保持し未完了として移行する", async () => {
-    db.exec(
-      "CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL); INSERT INTO tasks (id, title) VALUES (42, 'existing')",
-    );
-    const app = createApp(db);
-    expect(await (await app.request("/api/tasks")).json()).toEqual([
-      { id: 42, title: "existing", completed: false },
-    ]);
-  });
   it("新規タスクを未完了で作成する", async () => {
     const app = createApp(db);
     const response = await app.request("/api/tasks", {
@@ -113,7 +101,7 @@ describe("完了状態", () => {
   it.each([
     ["完了", true],
     ["未完了", false],
-  ])("%sへの変更をDBの再オープン後も保持する", async (_name, completed) => {
+  ])("%sへの変更をMySQLへの再接続後も保持する", async (_name, completed) => {
     let app = createApp(db);
     await app.request("/api/tasks", { method: "POST", body: JSON.stringify({ title: "task" }) });
     await app.request("/api/tasks/1", {
@@ -121,8 +109,8 @@ describe("完了状態", () => {
       body: JSON.stringify({ completed: true }),
     });
     await app.request("/api/tasks/1", { method: "PATCH", body: JSON.stringify({ completed }) });
-    db.close();
-    db = new DatabaseSync(join(directory, "test.sqlite"));
+    await db.end();
+    db = createDatabase();
     app = createApp(db);
     expect(await (await app.request("/api/tasks")).json()).toEqual([
       { id: 1, title: "task", completed },
@@ -139,24 +127,6 @@ describe("完了状態", () => {
       ).status,
     ).toBe(400);
   });
-});
-
-it("移行後の完了状態を同じDBの再オープン後も保持する", async () => {
-  db.exec(
-    "CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL); INSERT INTO tasks (id, title) VALUES (42, 'existing')",
-  );
-  let app = createApp(db);
-  const updated = await app.request("/api/tasks/42", {
-    method: "PATCH",
-    body: JSON.stringify({ completed: true }),
-  });
-  expect(updated.status).toBe(200);
-  db.close();
-  db = new DatabaseSync(join(directory, "test.sqlite"));
-  app = createApp(db);
-  expect(await (await app.request("/api/tasks")).json()).toEqual([
-    { id: 42, title: "existing", completed: true },
-  ]);
 });
 
 it.each(["0", "-1", "1.5", "9007199254740992", "abc"])(
@@ -178,22 +148,22 @@ it("更新時に不正なJSONを400で拒否する", async () => {
 
 it("想定外のDB障害には500を返す", async () => {
   const app = createApp(db);
-  db.close();
+  await db.end();
   try {
     expect((await app.request("/api/tasks")).status).toBe(500);
   } finally {
-    db = new DatabaseSync(join(directory, "test.sqlite"));
+    db = createDatabase();
   }
 });
 
 describe("タスクの削除", () => {
-  it("削除したタスクは同じDBを開き直した一覧に現れず、他のタスクは残る", async () => {
+  it("削除したタスクは同じMySQLへ再接続した一覧に現れず、他のタスクは残る", async () => {
     let app = createApp(db);
     await app.request("/api/tasks", { method: "POST", body: JSON.stringify({ title: "削除" }) });
     await app.request("/api/tasks", { method: "POST", body: JSON.stringify({ title: "残す" }) });
     expect((await app.request("/api/tasks/1", { method: "DELETE" })).status).toBe(204);
-    db.close();
-    db = new DatabaseSync(join(directory, "test.sqlite"));
+    await db.end();
+    db = createDatabase();
     app = createApp(db);
     expect(await (await app.request("/api/tasks")).json()).toEqual([
       { id: 2, title: "残す", completed: false },
@@ -206,4 +176,28 @@ describe("タスクの削除", () => {
       expect((await app.request(`/api/tasks/${id}`, { method: "DELETE" })).status).toBe(404);
     },
   );
+});
+
+it("長いタイトルを作成してMySQLから読み出せる", async () => {
+  const app = createApp(db);
+  const title = "長".repeat(30000);
+  const created = await app.request("/api/tasks", {
+    method: "POST",
+    body: JSON.stringify({ title }),
+  });
+  expect(created.status).toBe(201);
+  expect((await (await app.request("/api/tasks")).json())[0].title).toBe(title);
+});
+
+it("タイトルと完了状態を並行更新しても両方を保持する", async () => {
+  const app = createApp(db);
+  await app.request("/api/tasks", { method: "POST", body: JSON.stringify({ title: "before" }) });
+  const results = await Promise.all([
+    app.request("/api/tasks/1", { method: "PATCH", body: JSON.stringify({ title: "after" }) }),
+    app.request("/api/tasks/1", { method: "PATCH", body: JSON.stringify({ completed: true }) }),
+  ]);
+  expect(results.map((response) => response.status)).toEqual([200, 200]);
+  expect(await (await app.request("/api/tasks")).json()).toEqual([
+    { id: 1, title: "after", completed: true },
+  ]);
 });
