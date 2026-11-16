@@ -96,3 +96,21 @@ hookは対応するエージェントのツール操作で実行されます。h
 ## 仕様とテスト
 
 [仕様とテストの一覧](tasks/index.html)から、各課題の仕様と対応するテストを確認できます。仕様や対応表を変更したときは `node tasks/build-index.mjs` でHTMLを更新します。
+
+## StrykerJSによるテストの評価
+
+評価用のクリーンな作業領域で、対象となる実装ファイルを指定します。実行にはDockerが必要です。対象を省略すると `frontend/src/search.ts` を調べます。
+
+```sh
+npm run test:mutation -- frontend/src/search.ts
+npm run test:mutation -- backend/src/app.ts
+npm run test:mutation -- --e2e frontend/src/App.tsx:100-120
+# ブラウザーで既知の変異を実際に検出できるかを確認
+npm run test:mutation:smoke
+```
+
+通常はVitestのAPI・単体テスト全体を実行します。`--e2e` はPlaywrightの画面テスト全体を実行するため、時間がかかります。画面に送る変異IDはテスト専用のVite設定でブラウザーに渡します。`ファイル:開始行-終了行` を指定すると対象を絞れます。どちらも専用MySQLとコピーしたコードを使い、並列数を1にします。画面テストは各変異の前に専用DBを初期化し、前の試行のデータによる誤判定を防ぎます。実行ごとに `.harness/mutation/` の別ディレクトリへ対象・候補・実行結果、JSONとHTMLを保存します。Strykerの一時コピーは `.stryker-tmp/` に作成し、Gitには含めません。
+
+Strykerは終了コードにより変異を判定します。`Killed` は必ずしも期待した振る舞いのテストで検出されたことを意味しません。評価者はJSONの `statusReason` を確認し、対象テストの失敗、実行環境の問題、同等の振る舞いとなる変異を区別します。カバレッジ分析は無効で、未実行の変異を `NoCoverage` として区別できません。スコアは選んだファイルとテストに限られます。
+
+Stryker 10のTypeScript設定処理はTypeScript 7で削除されたAPIを利用するため、設定ファイルのパス書き換えを行わない設定にしています。現在のTypeScript設定はリポジトリ内のファイルのみを参照します。外部への参照を追加する場合はこの設定を見直してください。依存関係の既知の脆弱性を避けるため、Strykerの `minimatch` と `typed-rest-client` の `qs` は修正済みバージョンへoverrideしています。Strykerの更新時には互換性と監査結果を再確認してください。

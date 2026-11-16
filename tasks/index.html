@@ -122,6 +122,46 @@
           </ul>
         </div>
       </details>
+      <details>
+        <summary>テストの変異による評価</summary>
+        <div class="content">
+          <h2>テストの変異による評価</h2>
+          <p>
+            評価者はStrykerJSで実装に変異を加え、既存のテストが検出できるかを調べる。元の候補とテストを変更せず、コピーしたコードと試行専用のMySQLを使う。
+          </p>
+          <ul>
+            <li>
+              対象となる実装ファイルと必要に応じて行範囲を指定する。VitestのAPI・単体テスト、またはPlaywrightの画面テストを選べる。
+            </li>
+            <li>
+              MySQLを共有するテストが干渉しないよう、変異の同時実行数は1とする。画面テストは各変異の開始前に試行専用DBを初期化する。
+            </li>
+            <li>
+              候補のコミット、変更の有無、対象、実行時刻と終了結果を記録し、変異ごとの結果をJSONとHTMLに保存する。
+            </li>
+            <li>実行時の中断では子プロセスを停止し、試行専用のMySQLとボリュームを削除する。</li>
+            <li>
+              Strykerの終了コードとスコアだけで合否を決めない。各変異の結果と失敗理由を確認し、対象のテストによる検出、環境エラー、等価な変異を区別する。
+            </li>
+          </ul>
+          <h3>確認方法</h3>
+          <ul>
+            <li>
+              <code>npm run test:mutation:smoke</code>:
+              検索語の前後の空白を除かない変異を、対応する画面テストが検出する。
+            </li>
+            <li>
+              <code>npm run test:mutation -- frontend/src/search.ts:7-7</code>:
+              選んだ行の変異をVitestで調べる。
+            </li>
+            <li>
+              実行方法と判定上の制限は <a href="../README.md">README</a> と
+              <a href="../.agents/skills/agent-harness/references/evaluation.md">評価手順</a>
+              を参照する。
+            </li>
+          </ul>
+        </div>
+      </details>
       <p>他の機能の現在の仕様は整理中です。</p>
       <p><a href="#specifications">仕様を読む</a> · <a href="#tests">テストとの対応を見る</a></p>
       <h2>課題の記録</h2>
@@ -136,42 +176,47 @@
           </thead>
           <tbody>
             <tr>
-              <td><a href="#spec-1">タスク一覧の見た目と操作</a></td>
+              <td><a href="#spec-1">StrykerJSを使ったテストの評価</a></td>
               <td>確定</td>
               <td>実装済み</td>
             </tr>
             <tr>
-              <td><a href="#spec-2">タスクの完了</a></td>
+              <td><a href="#spec-2">タスク一覧の見た目と操作</a></td>
               <td>確定</td>
               <td>実装済み</td>
             </tr>
             <tr>
-              <td><a href="#spec-3">タイトル検索</a></td>
+              <td><a href="#spec-3">タスクの完了</a></td>
               <td>確定</td>
               <td>実装済み</td>
             </tr>
             <tr>
-              <td><a href="#spec-4">タスク削除</a></td>
+              <td><a href="#spec-4">タイトル検索</a></td>
+              <td>確定</td>
+              <td>実装済み</td>
+            </tr>
+            <tr>
+              <td><a href="#spec-5">タスク削除</a></td>
               <td>草案（最終レビュー待ち）</td>
               <td>実装済み</td>
             </tr>
             <tr>
-              <td><a href="#spec-5">MySQLへの変更</a></td>
+              <td><a href="#spec-6">MySQLへの変更</a></td>
               <td>草案</td>
               <td>実装済み</td>
             </tr>
             <tr>
-              <td><a href="#spec-6">期限の追加</a></td>
+              <td><a href="#spec-7">期限の追加</a></td>
               <td>過去の試行用課題</td>
               <td>未実装</td>
             </tr>
             <tr>
-              <td><a href="#spec-7">期限設定（現行ベースライン）</a></td>
+              <td><a href="#spec-8">期限設定（現行ベースライン）</a></td>
               <td>確定</td>
               <td>実装済み</td>
             </tr>
             <tr>
-              <td><a href="#spec-8">レビュー用HTMLの汎用化</a></td>
+              <td><a href="#spec-9">レビュー用HTMLの汎用化</a></td>
               <td>確定</td>
               <td>実装済み</td>
             </tr>
@@ -180,6 +225,54 @@
       </div>
       <h2 id="specifications">課題の仕様</h2>
       <details id="spec-1">
+        <summary>StrykerJSを使ったテストの評価 <span>確定 · 実装済み</span></summary>
+        <div class="content">
+          <h2>StrykerJSを使ったテストの評価</h2>
+          <ul>
+            <li>状態: 確定</li>
+            <li>対象リポジトリ: first-hernes</li>
+            <li>対象コミット: <code>ce674d7ab01cf7464a8f8239956b75a28245e1a0</code></li>
+          </ul>
+          <h3>要求</h3>
+          <p>評価者がStrykerJSを利用してmutationの調査をできるようにする。</p>
+          <h3>振る舞いと受け入れ条件</h3>
+          <ul>
+            <li>
+              [AC-01] 対象のファイルと行範囲を指定し、Vitestまたは画面テストで変異を評価できる。
+            </li>
+          </ul>
+          <p>- [CHECK-01] 検索の空白処理を変えた変異を、対応する画面テストの失敗で検出する。</p>
+          <p>- [CHECK-02] 行範囲を指定し、対象外の行の変異を実行しない。</p>
+          <ul>
+            <li>[AC-02] 評価対象と既存データを保護し、結果と経緯を確認できる。</li>
+          </ul>
+          <p>
+            - [CHECK-03]
+            試行ごとに専用MySQLとコピーしたコードを使い、各画面テストの前にデータを初期化する。
+          </p>
+          <p>- [CHECK-04] 中断時に子プロセスと専用MySQLを停止し、結果を記録する。</p>
+          <p>- [CHECK-05] 変異結果と原因を確認できるJSON・HTMLと実行情報を保存する。</p>
+          <ul>
+            <li>[AC-03] 評価者が結果を解釈し、確認した範囲を記録できる。</li>
+          </ul>
+          <p>- [CHECK-06] 終了コードによる検出と対象テストの失敗を区別する手順を記載する。</p>
+          <h3>判断したこと</h3>
+          <ul>
+            <li>VitestとPlaywrightの既存テストを使い、同時実行数は1とする。</li>
+            <li>Strykerのコマンド実行方式を使う。変異の結果と失敗理由は評価者が確認する。</li>
+            <li>
+              TypeScript
+              7ではStrykerのtsconfig書き換えを使用しない。外部参照を追加する場合は再検討する。
+            </li>
+            <li>
+              依存関係の監査で報告された脆弱性を避けるため、修正済みの依存バージョンを指定する。
+            </li>
+          </ul>
+          <h3>未決事項</h3>
+          <p>なし。</p>
+        </div>
+      </details>
+      <details id="spec-2">
         <summary>タスク一覧の見た目と操作 <span>確定 · 実装済み</span></summary>
         <div class="content">
           <h2>タスク一覧の見た目と操作の分かりやすさを改善する</h2>
@@ -270,7 +363,7 @@
           <p>なし。</p>
         </div>
       </details>
-      <details id="spec-2">
+      <details id="spec-3">
         <summary>タスクの完了 <span>確定 · 実装済み</span></summary>
         <div class="content">
           <h2>タスクを完了できるようにする</h2>
@@ -417,7 +510,7 @@
           <p>AC-07とAC-08は既存機能とAPIのエラーに関する条件です。個別の仕様IDは付いていません。</p>
         </div>
       </details>
-      <details id="spec-3">
+      <details id="spec-4">
         <summary>タイトル検索 <span>確定 · 実装済み</span></summary>
         <div class="content">
           <h2>タスクをタイトルで検索する</h2>
@@ -519,7 +612,7 @@
           </p>
         </div>
       </details>
-      <details id="spec-4">
+      <details id="spec-5">
         <summary>タスク削除 <span>草案（最終レビュー待ち） · 実装済み</span></summary>
         <div class="content">
           <h2>タスク削除</h2>
@@ -556,7 +649,7 @@
           <p>なし。仕様全体は人による最終レビュー待ち。</p>
         </div>
       </details>
-      <details id="spec-5">
+      <details id="spec-6">
         <summary>MySQLへの変更 <span>草案 · 実装済み</span></summary>
         <div class="content">
           <h2>SQLite から Docker MySQL への変更</h2>
@@ -597,7 +690,7 @@
           </p>
         </div>
       </details>
-      <details id="spec-6">
+      <details id="spec-7">
         <summary>期限の追加 <span>過去の試行用課題 · 未実装</span></summary>
         <div class="content">
           <h2>課題: タスクに期限を追加する</h2>
@@ -635,7 +728,7 @@
           <p>この課題のコードをコミットしないでください。評価用資産を探さないでください。</p>
         </div>
       </details>
-      <details id="spec-7">
+      <details id="spec-8">
         <summary>期限設定（現行ベースライン） <span>確定 · 実装済み</span></summary>
         <div class="content">
           <h2>タスクの期限設定</h2>
@@ -727,7 +820,7 @@
           </ul>
         </div>
       </details>
-      <details id="spec-8">
+      <details id="spec-9">
         <summary>レビュー用HTMLの汎用化 <span>確定 · 実装済み</span></summary>
         <div class="content">
           <h2>レビュー用HTMLの汎用化</h2>
@@ -738,7 +831,7 @@
           </ul>
           <h3>後から変更した方針</h3>
           <p>
-            動画の本数は、現在は機能追加では注釈付き動画1本とする。既存UIの変更では、変更前後を撮影して比較用の1本に合成する。以下の仕様は作成時の記録であり、動画の本数についてはこの方針を適用する。
+            動画の本数は、現在は機能追加では注釈付き動画1本とする。既存UIの変更では、変更前後を撮影して比較用の1本に合成する。各操作の後に1秒の間隔を入れる。以下の仕様は作成時の記録であり、動画の本数についてはこの方針を適用する。
           </p>
           <h3>要求</h3>
           <p>
@@ -1175,6 +1268,29 @@
             >、<code>キーボードで検索語を入力すると一致するタスクだけを一覧に表示する</code>、<code>キーボードで完了ステータスを選ぶと完了タスクが一覧に表示される</code>、<code>キーボードでタイトルを編集して保存すると一覧に変更後のタイトルを表示する</code>、<code>キーボードで削除を選び確認をキャンセルするとタスクが一覧に残る</code>、<code>キーボードで未完了タスクを完了にして一覧から消すと検索欄にフォーカスを移す</code>、<code>キーボードでタスクを削除すると検索欄にフォーカスを移す</code>、<code>検索中にタイトルを変更して一覧から消すと検索欄にフォーカスを移す</code>。
           </li>
           <li>CHECK-06: 既存の画面・APIテスト、型検査、Lintの実行結果を確認する。</li>
+        </ul>
+        <h3><a href="mutation-testing.md">StrykerJSを使ったテストの評価</a></h3>
+        <ul>
+          <li>
+            CHECK-01:
+            <a href="../tests/mutation/smoke.test.mjs"
+              >検索語の前後の空白を除かない変異を対応する画面テストが検出する</a
+            >。
+          </li>
+          <li>
+            CHECK-02:
+            <code>npm run test:mutation -- frontend/src/search.ts:7-7</code>
+            で1変異に絞った結果とJSONを確認。
+          </li>
+          <li>
+            CHECK-03〜05:
+            独立クローンでVitest・画面・MySQLの実行、SIGINT・SIGTERM、後片付けと記録を確認。
+          </li>
+          <li>
+            CHECK-06:
+            <a href="../.agents/skills/agent-harness/references/evaluation.md">評価手順</a
+            >の変異結果の解釈を確認。
+          </li>
         </ul>
       </section>
       <hr />

@@ -15,7 +15,9 @@
     "test:e2e": "node scripts/test-mysql.mjs playwright",
     "preview": "vite preview",
     "test:hooks": "node --test tests/hooks/*.test.mjs",
-    "test:viewer": "node --test tests/viewer/*.test.mjs"
+    "test:viewer": "node --test tests/viewer/*.test.mjs",
+    "test:mutation": "node scripts/test-mutation.mjs",
+    "test:mutation:smoke": "node --test tests/mutation/*.test.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.8",
@@ -26,6 +28,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",
+    "@stryker-mutator/core": "10.1.1",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -36,6 +39,14 @@
     "typescript": "~7.0.2",
     "vite": "^8.3.6",
     "vitest": "^5.1.0"
+  },
+  "overrides": {
+    "@stryker-mutator/core": {
+      "minimatch": "11.0.8"
+    },
+    "typed-rest-client": {
+      "qs": "6.17.1"
+    }
   },
   "engines": {
     "node": ">=22.13.0"
