@@ -15,7 +15,7 @@ node viewer/build.mjs <report.json> <index.html>
 
 ## 動画を撮影する
 
-候補のコミット済みworktreeを指定し、タスク固有の操作シナリオを使います。`start({checkout})` は対象候補の環境を起動し、`url` と非同期の `stop` を返します。`run({page, note, annotated})` はPlaywrightで操作し、注釈を `note` で記録します。注釈付き動画を1本撮影します。撮影前にPlaywrightのChromiumをインストールしてください。
+候補のコミット済みworktreeを指定し、タスク固有の操作シナリオを使います。`start({checkout})` は対象候補の環境を起動し、`url` と非同期の `stop` を返します。`run({page, note, annotated})` はPlaywrightで操作し、注釈を `note` で記録します。注釈付き動画を1本撮影し、操作のたびに1秒の間隔を入れます。撮影前にPlaywrightのChromiumをインストールしてください。
 
 ```sh
 node viewer/record-scenario.mjs <候補worktree> <scenario.mjs> <出力ディレクトリ>

@@ -28,7 +28,7 @@ try {
   environment = await scenario.start({ checkout });
   if (!environment?.url || typeof environment.stop !== "function")
     throw new Error("start must return url and stop");
-  browser = await chromium.launch({ headless: true, slowMo: 250 });
+  browser = await chromium.launch({ headless: true, slowMo: 1000 });
   for (const annotated of [true]) {
     const context = await browser.newContext({
       viewport: { width: 1200, height: 820 },
