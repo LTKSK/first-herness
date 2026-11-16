@@ -318,3 +318,178 @@ test("期限を設定して作成し、編集・解除した結果を再読み�
   await page.reload();
   await expect(row).toContainText("期限: なし");
 });
+
+test("タスクが1件もない一覧を開くと追加方法を案内する", async ({ page, request }) => {
+  const response = await request.get("/api/tasks");
+  const existing = (await response.json()) as { id: number }[];
+  for (const task of existing) await request.delete(`/api/tasks/${task.id}`);
+  await page.goto("/");
+  await expect(page.getByText("上のフォームからタスクを追加しましょう。")).toBeVisible();
+});
+
+test("検索条件に合うタスクがないと一覧に条件の変更を案内する", async ({ page }) => {
+  await page.goto("/");
+  await addTask(page, `確認項目 ${Date.now()}`);
+  await page.getByLabel("タイトルを検索").fill("一致しない検索語");
+  await expect(page.getByText("検索語やステータスを変更してください。")).toBeVisible();
+});
+
+test("ステータスの選択欄を表示すると1つ以上の選択が必要と分かる", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByText("ステータスを1つ以上選択してください。")).toBeVisible();
+  await expect(page.getByRole("group", { name: "ステータス" })).toHaveAccessibleDescription(
+    "ステータスを1つ以上選択してください。",
+  );
+});
+
+test("狭い画面で長いタイトルのタスクを表示すると編集と削除を画面内で操作できる", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto("/");
+  const title = `長いタイトル${"長".repeat(100)}${Date.now()}`;
+  await addTask(page, title);
+  const row = page.getByRole("listitem").filter({ hasText: title });
+  await row.getByRole("button", { name: "編集" }).scrollIntoViewIfNeeded();
+  await expect(row.getByRole("button", { name: "編集" })).toBeInViewport();
+  await expect(row.getByRole("button", { name: "削除" })).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+  await row.getByRole("button", { name: "編集" }).click();
+  await expect(page.getByLabel("タイトルを編集")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+});
+
+test("キーボードで編集を開始してキャンセルすると元のタイトルが残る", async ({ page }) => {
+  await page.goto("/");
+  const title = `キーボード ${Date.now()}`;
+  await addTask(page, title);
+  const row = page.getByRole("listitem").filter({ hasText: title });
+  await row.getByRole("button", { name: "編集" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel("タイトルを編集")).toBeFocused();
+  const cancel = page.getByRole("button", { name: "キャンセル" });
+  for (
+    let i = 0;
+    i < 10 && !(await cancel.evaluate((button) => button === document.activeElement));
+    i++
+  ) {
+    await page.keyboard.press("Tab");
+  }
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(row.getByText(title, { exact: true })).toBeVisible();
+  await expect(row.getByRole("button", { name: "編集" })).toBeFocused();
+});
+
+test("一覧の読み込みが失敗した後にタスクを追加すると追加したタスクを表示する", async ({ page }) => {
+  await page.route("**/api/tasks", async (route) => {
+    if (route.request().method() === "GET") await route.fulfill({ status: 500 });
+    else await route.continue();
+  });
+  await page.goto("/");
+  await expect(page.getByRole("alert")).toContainText("読み込みに失敗");
+  const title = `読み込み後 ${Date.now()}`;
+  await addTask(page, title);
+  await expect(page.getByText(title, { exact: true })).toBeVisible();
+});
+
+async function tabTo(
+  page: import("@playwright/test").Page,
+  locator: import("@playwright/test").Locator,
+) {
+  for (
+    let i = 0;
+    i < 80 && !(await locator.evaluate((element) => element === document.activeElement));
+    i++
+  ) {
+    await page.keyboard.press("Tab");
+  }
+  await expect(locator).toBeFocused();
+}
+
+test("キーボードで検索語を入力すると一致するタスクだけを一覧に表示する", async ({ page }) => {
+  await page.goto("/");
+  const title = `keysearch${Date.now()}`;
+  await addTask(page, title);
+  const search = page.getByLabel("タイトルを検索");
+  await tabTo(page, search);
+  await page.keyboard.type(title);
+  await expect(page.getByText(title, { exact: true })).toBeVisible();
+  await expect(page.getByText("1 件", { exact: true })).toBeVisible();
+});
+
+test("キーボードで完了ステータスを選ぶと完了タスクが一覧に表示される", async ({ page }) => {
+  await page.goto("/");
+  const title = `keyfilter${Date.now()}`;
+  await addTask(page, title);
+  const toggle = page.getByRole("checkbox", { name: `${title}を完了`, exact: true });
+  await tabTo(page, toggle);
+  await page.keyboard.press("Space");
+  await expect(page.getByText(title, { exact: true })).toHaveCount(0);
+  const complete = page.getByRole("checkbox", { name: "完了", exact: true });
+  await tabTo(page, complete);
+  await page.keyboard.press("Space");
+  await expect(page.getByText(title, { exact: true })).toBeVisible();
+});
+
+test("キーボードでタイトルを編集して保存すると一覧に変更後のタイトルを表示する", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const title = `keyedit${Date.now()}`;
+  await addTask(page, title);
+  const row = page.getByRole("listitem").filter({ hasText: title });
+  await tabTo(page, row.getByRole("button", { name: "編集" }));
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.type("keyboard saved");
+  await tabTo(page, page.getByRole("button", { name: "保存" }));
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("keyboard saved", { exact: true })).toBeVisible();
+});
+
+test("キーボードで削除を選び確認をキャンセルするとタスクが一覧に残る", async ({ page }) => {
+  await page.goto("/");
+  const title = `keydelete${Date.now()}`;
+  await addTask(page, title);
+  const row = page.getByRole("listitem").filter({ hasText: title });
+  await tabTo(page, row.getByRole("button", { name: "削除" }));
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await page.keyboard.press("Enter");
+  await expect(page.getByText(title, { exact: true })).toBeVisible();
+});
+
+test("キーボードで未完了タスクを完了にして一覧から消すと検索欄にフォーカスを移す", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const title = `focuscomplete${Date.now()}`;
+  await addTask(page, title);
+  const toggle = page.getByRole("checkbox", { name: `${title}を完了`, exact: true });
+  await tabTo(page, toggle);
+  await page.keyboard.press("Space");
+  await expect(page.getByLabel("タイトルを検索")).toBeFocused();
+});
+
+test("キーボードでタスクを削除すると検索欄にフォーカスを移す", async ({ page }) => {
+  await page.goto("/");
+  const title = `focusdelete${Date.now()}`;
+  await addTask(page, title);
+  const row = page.getByRole("listitem").filter({ hasText: title });
+  await tabTo(page, row.getByRole("button", { name: "削除" }));
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel("タイトルを検索")).toBeFocused();
+});
+
+test("検索中にタイトルを変更して一覧から消すと検索欄にフォーカスを移す", async ({ page }) => {
+  await page.goto("/");
+  const title = `focusedit${Date.now()}`;
+  await addTask(page, title);
+  await page.getByLabel("タイトルを検索").fill(title);
+  const row = page.getByRole("listitem").filter({ hasText: title });
+  await row.getByRole("button", { name: "編集" }).click();
+  await page.getByLabel("タイトルを編集").fill("別のタイトル");
+  await page.getByRole("button", { name: "保存" }).click();
+  await expect(page.getByLabel("タイトルを検索")).toBeFocused();
+});

@@ -151,3 +151,107 @@ li:last-child {
   align-items: center;
   gap: 12px;
 }
+
+/* 一覧の情報と操作をタスクごとにまとめる。 */
+.list-heading {
+  align-items: baseline;
+  gap: 12px;
+}
+.task-count {
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+#search-title {
+  width: 100%;
+  margin-bottom: 18px;
+}
+.filters {
+  margin-bottom: 6px;
+}
+.filter-hint {
+  margin: 0 0 20px;
+  color: #52665b;
+  font-size: 0.8125rem;
+}
+li {
+  align-items: center;
+  gap: 16px;
+}
+.task-info {
+  flex: 1;
+  min-width: 0;
+  align-items: flex-start;
+}
+.task-status {
+  flex: none;
+  padding-top: 3px;
+  font-size: 0.8125rem;
+}
+.task-details {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.task-title {
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.task-due {
+  color: #52665b;
+  font-size: 0.8125rem;
+}
+.task-actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+.task-actions button {
+  padding: 9px 12px;
+}
+.empty {
+  padding: 20px;
+  background: #f5f8f5;
+  border-radius: 9px;
+  color: #52665b;
+}
+.empty p {
+  margin: 0;
+}
+.empty p + p {
+  margin-top: 6px;
+  font-size: 0.875rem;
+}
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid #256e55;
+  outline-offset: 3px;
+}
+@media (max-width: 480px) {
+  main {
+    padding: 28px 14px;
+  }
+  .card {
+    padding: 18px;
+  }
+  li {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .task-info {
+    width: 100%;
+  }
+  .task-actions {
+    justify-content: flex-end;
+  }
+  .edit {
+    flex-direction: column;
+  }
+  .edit input {
+    width: 100%;
+    flex-basis: auto;
+  }
+  .edit label {
+    margin-bottom: 0;
+  }
+}

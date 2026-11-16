@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { matchesTitle } from "./search";
 
@@ -11,9 +11,12 @@ export default function App() {
   const [draftDueDate, setDraftDueDate] = useState("");
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<number | null>(null);
+  const restoreFocus = useRef<number | null>(null);
+  const restoreListOnUpdate = useRef(false);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [statuses, setStatuses] = useState({ incomplete: true, complete: false });
   const visibleTasks = tasks.filter(
     (task) =>
@@ -28,12 +31,31 @@ export default function App() {
         if (!response.ok) throw new Error();
         return response.json() as Promise<Task[]>;
       })
-      .then(setTasks)
+      .then((loadedTasks) => {
+        setTasks(loadedTasks);
+        setLoaded(true);
+      })
       .catch(() => {
         if (!controller.signal.aborted) setError("タスクの読み込みに失敗しました。");
       });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (editing === null && restoreFocus.current !== null) {
+      const button = document.getElementById(`edit-button-${restoreFocus.current}`);
+      (button ?? document.getElementById("search-title"))?.focus();
+      restoreFocus.current = null;
+    }
+  }, [editing]);
+
+  useEffect(() => {
+    if (restoreListOnUpdate.current) {
+      if (document.activeElement === document.body)
+        document.getElementById("search-title")?.focus();
+      restoreListOnUpdate.current = false;
+    }
+  }, [tasks]);
 
   async function save(value: string, date: string, id?: number) {
     if (!value.trim()) {
@@ -57,6 +79,8 @@ export default function App() {
       );
       setTitle("");
       setDueDate("");
+      setLoaded(true);
+      if (id !== undefined) restoreFocus.current = id;
       setEditing(null);
     } catch {
       setError("保存に失敗しました。もう一度お試しください。");
@@ -76,6 +100,7 @@ export default function App() {
       });
       if (!response.ok) throw new Error();
       const updated = (await response.json()) as Task;
+      restoreListOnUpdate.current = true;
       setTasks((current) => current.map((item) => (item.id === task.id ? updated : item)));
     } catch {
       setError("保存に失敗しました。もう一度お試しください。");
@@ -91,6 +116,7 @@ export default function App() {
     try {
       const response = await fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
       if (!response.ok) throw new Error();
+      restoreListOnUpdate.current = true;
       setTasks((current) => current.filter((item) => item.id !== task.id));
     } catch {
       setError("削除に失敗しました。もう一度お試しください。");
@@ -141,7 +167,9 @@ export default function App() {
       <section aria-labelledby="list-heading" className="card">
         <div className="list-heading">
           <h2 id="list-heading">タスク一覧</h2>
-          <span>{visibleTasks.length} 件</span>
+          <span className="task-count" aria-live="polite">
+            {visibleTasks.length} 件
+          </span>
         </div>
         <label htmlFor="search-title">タイトルを検索</label>
         <input
@@ -150,7 +178,7 @@ export default function App() {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <fieldset className="filters">
+        <fieldset className="filters" aria-describedby="status-hint">
           <legend>ステータス</legend>
           <label>
             <input
@@ -181,8 +209,18 @@ export default function App() {
             完了
           </label>
         </fieldset>
-        {visibleTasks.length === 0 ? (
-          <p className="empty">表示するタスクはありません。</p>
+        <p id="status-hint" className="filter-hint">
+          ステータスを1つ以上選択してください。
+        </p>
+        {!loaded ? null : visibleTasks.length === 0 ? (
+          <div className="empty" role="status">
+            <p>表示するタスクはありません。</p>
+            <p>
+              {tasks.length === 0
+                ? "上のフォームからタスクを追加しましょう。"
+                : "検索語やステータスを変更してください。"}
+            </p>
+          </div>
         ) : (
           <ul>
             {visibleTasks.map((task) => (
@@ -200,6 +238,7 @@ export default function App() {
                     </label>
                     <input
                       id={`edit-${task.id}`}
+                      autoFocus
                       value={draft}
                       onChange={(event) => setDraft(event.target.value)}
                     />
@@ -211,7 +250,14 @@ export default function App() {
                       onChange={(event) => setDraftDueDate(event.target.value)}
                     />
                     <button disabled={busy}>保存</button>
-                    <button className="secondary" type="button" onClick={() => setEditing(null)}>
+                    <button
+                      className="secondary"
+                      type="button"
+                      onClick={() => {
+                        restoreFocus.current = task.id;
+                        setEditing(null);
+                      }}
+                    >
                       キャンセル
                     </button>
                   </form>
@@ -228,29 +274,34 @@ export default function App() {
                         />
                         {task.completed ? "完了" : "未完了"}
                       </label>
-                      <span>{task.title}</span>
-                      <span>期限: {task.dueDate ?? "なし"}</span>
+                      <div className="task-details">
+                        <span className="task-title">{task.title}</span>
+                        <span className="task-due">期限: {task.dueDate ?? "なし"}</span>
+                      </div>
                     </div>
-                    <button
-                      className="secondary"
-                      type="button"
-                      onClick={() => {
-                        setEditing(task.id);
-                        setDraft(task.title);
-                        setDraftDueDate(task.dueDate ?? "");
-                        setError("");
-                      }}
-                    >
-                      編集
-                    </button>
-                    <button
-                      className="secondary"
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void deleteTask(task)}
-                    >
-                      削除
-                    </button>
+                    <div className="task-actions">
+                      <button
+                        className="secondary"
+                        type="button"
+                        id={`edit-button-${task.id}`}
+                        onClick={() => {
+                          setEditing(task.id);
+                          setDraft(task.title);
+                          setDraftDueDate(task.dueDate ?? "");
+                          setError("");
+                        }}
+                      >
+                        編集
+                      </button>
+                      <button
+                        className="secondary"
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void deleteTask(task)}
+                      >
+                        削除
+                      </button>
+                    </div>
                   </>
                 )}
               </li>
