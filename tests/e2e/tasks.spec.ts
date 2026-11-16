@@ -550,7 +550,7 @@ test("期限順でステータスを絞り込むと一致するタスクだけ�
     await page.getByLabel("期限（任意）").fill(date);
     await addTask(page, `${prefix} ${name}`);
   }
-  await page.getByRole("checkbox", { name: `${prefix} 早いを完了` }).check();
+  await page.getByRole("checkbox", { name: `${prefix} 早いを完了` }).click();
   await page.getByLabel("タイトルを検索").fill(prefix);
   await page.getByLabel("並び順").selectOption("due");
   await expect(page.locator(".task-title")).toHaveText([`${prefix} 遅い`]);
