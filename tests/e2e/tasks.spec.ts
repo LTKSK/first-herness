@@ -493,3 +493,89 @@ test("検索中にタイトルを変更して一覧から消すと検索欄に�
   await page.getByRole("button", { name: "保存" }).click();
   await expect(page.getByLabel("タイトルを検索")).toBeFocused();
 });
+
+test("期限順を選ぶと期限が近い順で未設定は最後になり登録順に戻せる", async ({ page }) => {
+  await page.goto("/");
+  const prefix = `sort ${Date.now()}`;
+  for (const [name, date] of [
+    ["なし", ""],
+    ["遅い", "2030-05-01"],
+    ["同日1", "2029-01-01"],
+    ["同日2", "2029-01-01"],
+  ]) {
+    await page.getByLabel("期限（任意）").fill(date);
+    await addTask(page, `${prefix} ${name}`);
+  }
+  await page.getByLabel("タイトルを検索").fill(prefix);
+  const titles = page.locator(".task-title");
+  await expect(titles).toHaveText([
+    `${prefix} なし`,
+    `${prefix} 遅い`,
+    `${prefix} 同日1`,
+    `${prefix} 同日2`,
+  ]);
+  await page.getByLabel("並び順").selectOption("due");
+  await expect(titles).toHaveText([
+    `${prefix} 同日1`,
+    `${prefix} 同日2`,
+    `${prefix} 遅い`,
+    `${prefix} なし`,
+  ]);
+  await page.getByLabel("並び順").selectOption("registered");
+  await expect(titles).toHaveText([
+    `${prefix} なし`,
+    `${prefix} 遅い`,
+    `${prefix} 同日1`,
+    `${prefix} 同日2`,
+  ]);
+  await page.getByLabel("並び順").selectOption("due");
+  await page.reload();
+  await expect(page.getByLabel("並び順")).toHaveValue("registered");
+  await page.getByLabel("タイトルを検索").fill(prefix);
+  await expect(titles).toHaveText([
+    `${prefix} なし`,
+    `${prefix} 遅い`,
+    `${prefix} 同日1`,
+    `${prefix} 同日2`,
+  ]);
+});
+
+test("期限順でステータスを絞り込むと一致するタスクだけが期限順に並ぶ", async ({ page }) => {
+  await page.goto("/");
+  const prefix = `status sort ${Date.now()}`;
+  for (const [name, date] of [
+    ["遅い", "2030-01-01"],
+    ["早い", "2029-01-01"],
+  ]) {
+    await page.getByLabel("期限（任意）").fill(date);
+    await addTask(page, `${prefix} ${name}`);
+  }
+  await page.getByRole("checkbox", { name: `${prefix} 早いを完了` }).check();
+  await page.getByLabel("タイトルを検索").fill(prefix);
+  await page.getByLabel("並び順").selectOption("due");
+  await expect(page.locator(".task-title")).toHaveText([`${prefix} 遅い`]);
+  await page.getByRole("checkbox", { name: "完了", exact: true }).check();
+  await expect(page.locator(".task-title")).toHaveText([`${prefix} 早い`, `${prefix} 遅い`]);
+});
+
+test("期限順で期限を変更して保存すると一覧が新しい期限順に並ぶ", async ({ page }) => {
+  await page.goto("/");
+  const prefix = `edit sort ${Date.now()}`;
+  for (const [name, date] of [
+    ["先", "2029-01-01"],
+    ["後", "2030-01-01"],
+  ]) {
+    await page.getByLabel("期限（任意）").fill(date);
+    await addTask(page, `${prefix} ${name}`);
+  }
+  await page.getByLabel("タイトルを検索").fill(prefix);
+  await page.getByLabel("並び順").selectOption("due");
+  await page
+    .locator("li")
+    .filter({ hasText: `${prefix} 後` })
+    .getByRole("button", { name: "編集" })
+    .click();
+  await page.getByLabel("期限を編集").fill("2028-01-01");
+  await page.getByRole("button", { name: "保存" }).click();
+  await expect(page.locator(".task-title")).toHaveText([`${prefix} 後`, `${prefix} 先`]);
+});

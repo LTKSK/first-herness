@@ -10,6 +10,7 @@ export default function App() {
   const [dueDate, setDueDate] = useState("");
   const [draftDueDate, setDraftDueDate] = useState("");
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"registered" | "due">("registered");
   const [editing, setEditing] = useState<number | null>(null);
   const restoreFocus = useRef<number | null>(null);
   const restoreListOnUpdate = useRef(false);
@@ -18,11 +19,21 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [statuses, setStatuses] = useState({ incomplete: true, complete: false });
-  const visibleTasks = tasks.filter(
-    (task) =>
-      (task.completed ? statuses.complete : statuses.incomplete) &&
-      matchesTitle(task.title, search),
-  );
+  const visibleTasks = tasks
+    .filter(
+      (task) =>
+        (task.completed ? statuses.complete : statuses.incomplete) &&
+        matchesTitle(task.title, search),
+    )
+    .sort((a, b) => {
+      if (sort === "due") {
+        if (a.dueDate === null && b.dueDate !== null) return 1;
+        if (a.dueDate !== null && b.dueDate === null) return -1;
+        if (a.dueDate !== null && b.dueDate !== null && a.dueDate !== b.dueDate)
+          return a.dueDate < b.dueDate ? -1 : 1;
+      }
+      return a.id - b.id;
+    });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -171,6 +182,15 @@ export default function App() {
             {visibleTasks.length} 件
           </span>
         </div>
+        <label htmlFor="sort-tasks">並び順</label>
+        <select
+          id="sort-tasks"
+          value={sort}
+          onChange={(event) => setSort(event.target.value as "registered" | "due")}
+        >
+          <option value="registered">登録順</option>
+          <option value="due">期限順</option>
+        </select>
         <label htmlFor="search-title">タイトルを検索</label>
         <input
           id="search-title"

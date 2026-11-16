@@ -87,6 +87,15 @@
           <p>
             タスク一覧には、選択されたステータスとタイトルの検索条件に一致するタスクを表示する。表示件数を示し、各タスクのタイトル、完了状態、期限と操作を対応付ける。
           </p>
+          <h3>並び順</h3>
+          <ul>
+            <li>
+              登録順と期限順を選択できる。期限順では近い日付が先、期限未設定は最後で、同日期限は登録順とする。
+            </li>
+            <li>
+              初期表示と再読み込み後は登録順に戻る。検索・ステータスと併用でき、期限の変更は表示順に反映される。
+            </li>
+          </ul>
           <h3>検索とステータス</h3>
           <ul>
             <li>
@@ -192,47 +201,52 @@
           </thead>
           <tbody>
             <tr>
-              <td><a href="#spec-1">StrykerJSを使ったテストの評価</a></td>
+              <td><a href="#spec-1">期限順の並び替え</a></td>
+              <td>実装先行</td>
+              <td>候補</td>
+            </tr>
+            <tr>
+              <td><a href="#spec-2">StrykerJSを使ったテストの評価</a></td>
               <td>確定</td>
               <td>実装済み</td>
             </tr>
             <tr>
-              <td><a href="#spec-2">タスク一覧の見た目と操作</a></td>
+              <td><a href="#spec-3">タスク一覧の見た目と操作</a></td>
               <td>確定</td>
               <td>実装済み</td>
             </tr>
             <tr>
-              <td><a href="#spec-3">タスクの完了</a></td>
+              <td><a href="#spec-4">タスクの完了</a></td>
               <td>確定</td>
               <td>実装済み</td>
             </tr>
             <tr>
-              <td><a href="#spec-4">タイトル検索</a></td>
+              <td><a href="#spec-5">タイトル検索</a></td>
               <td>確定</td>
               <td>実装済み</td>
             </tr>
             <tr>
-              <td><a href="#spec-5">タスク削除</a></td>
+              <td><a href="#spec-6">タスク削除</a></td>
               <td>草案（最終レビュー待ち）</td>
               <td>実装済み</td>
             </tr>
             <tr>
-              <td><a href="#spec-6">MySQLへの変更</a></td>
+              <td><a href="#spec-7">MySQLへの変更</a></td>
               <td>草案</td>
               <td>実装済み</td>
             </tr>
             <tr>
-              <td><a href="#spec-7">期限の追加</a></td>
+              <td><a href="#spec-8">期限の追加</a></td>
               <td>過去の試行用課題</td>
               <td>未実装</td>
             </tr>
             <tr>
-              <td><a href="#spec-8">期限設定（現行ベースライン）</a></td>
+              <td><a href="#spec-9">期限設定（現行ベースライン）</a></td>
               <td>確定</td>
               <td>実装済み</td>
             </tr>
             <tr>
-              <td><a href="#spec-9">レビュー用HTMLの汎用化</a></td>
+              <td><a href="#spec-10">レビュー用HTMLの汎用化</a></td>
               <td>確定</td>
               <td>実装済み</td>
             </tr>
@@ -241,6 +255,63 @@
       </div>
       <h2 id="specifications">課題の仕様</h2>
       <details id="spec-1">
+        <summary>期限順の並び替え <span>実装先行 · 候補</span></summary>
+        <div class="content">
+          <h2>タスクを期限順に並び替える</h2>
+          <ul>
+            <li>状態: 実装先行（仕様草案の確認を省略するようユーザーが指示）</li>
+            <li>対象リポジトリ: <code>/home/ltksk/workspace/first-hernes</code></li>
+            <li>対象コミット: <code>809673edb5283c7052049fded63b0a89fe9e0276</code></li>
+          </ul>
+          <h3>要求・目的</h3>
+          <p>タスクを期限順に並び替え、期限の近いタスクを把握する。</p>
+          <h3>現状</h3>
+          <p>
+            一覧はAPIがID順で返したタスクを検索・ステータスで絞り込む。期限は任意の日付。ドラッグ＆ドロップは存在しない。根拠:
+            <code>frontend/src/App.tsx</code
+            >、<code>backend/src/app.ts</code>、<code>specifications/task-list.md</code>。
+          </p>
+          <h3>振る舞い</h3>
+          <ul>
+            <li>
+              [SPEC-01]
+              登録順と期限順を一覧から選択できる。期限順では近い日付から表示し、未設定は最後。同じ期限は登録順。
+            </li>
+            <li>
+              [SPEC-02] 初期表示と再読み込み後は登録順。検索・ステータスの絞り込みと併用できる。
+            </li>
+          </ul>
+          <h3>受け入れ条件</h3>
+          <ul>
+            <li>[AC-01] 並び順を切り替えられる。（SPEC-01）</li>
+          </ul>
+          <p>
+            - [CHECK-01]
+            期限あり、同日、未設定のタスクを作り、期限順と登録順を切り替えて表示順を確認する。
+          </p>
+          <ul>
+            <li>[AC-02] 初期値と他の操作が保たれる。（SPEC-02）</li>
+          </ul>
+          <p>- [CHECK-02] 期限順を選択して再読み込みし、登録順に戻ることを確認する。</p>
+          <p>
+            - [CHECK-03]
+            検索・ステータスを選び、条件に一致したタスクが選択順で表示されることを確認する。
+          </p>
+          <h3>現在の仕様への影響・既存機能との関係</h3>
+          <p>
+            一覧に並び順の選択を追加する。API・保存形式および作成、編集、削除、検索、ステータスの振る舞いを維持する。
+          </p>
+          <h3>見た目の変更</h3>
+          <p>一覧に操作を追加する。新旧の画面を比較して確認する。</p>
+          <h3>判断したこと</h3>
+          <p>
+            ユーザーは2種類の順序、期限昇順、未設定を最後、同日期限は登録順、再読み込み時に登録順に戻すことを指定した。ドラッグ＆ドロップは現状存在しないため対象外とした。仕様草案の確認前に作業を進めるよう指示された。
+          </p>
+          <h3>未決事項</h3>
+          <p>なし。</p>
+        </div>
+      </details>
+      <details id="spec-2">
         <summary>StrykerJSを使ったテストの評価 <span>確定 · 実装済み</span></summary>
         <div class="content">
           <h2>StrykerJSを使ったテストの評価</h2>
@@ -288,7 +359,7 @@
           <p>なし。</p>
         </div>
       </details>
-      <details id="spec-2">
+      <details id="spec-3">
         <summary>タスク一覧の見た目と操作 <span>確定 · 実装済み</span></summary>
         <div class="content">
           <h2>タスク一覧の見た目と操作の分かりやすさを改善する</h2>
@@ -379,7 +450,7 @@
           <p>なし。</p>
         </div>
       </details>
-      <details id="spec-3">
+      <details id="spec-4">
         <summary>タスクの完了 <span>確定 · 実装済み</span></summary>
         <div class="content">
           <h2>タスクを完了できるようにする</h2>
@@ -526,7 +597,7 @@
           <p>AC-07とAC-08は既存機能とAPIのエラーに関する条件です。個別の仕様IDは付いていません。</p>
         </div>
       </details>
-      <details id="spec-4">
+      <details id="spec-5">
         <summary>タイトル検索 <span>確定 · 実装済み</span></summary>
         <div class="content">
           <h2>タスクをタイトルで検索する</h2>
@@ -628,7 +699,7 @@
           </p>
         </div>
       </details>
-      <details id="spec-5">
+      <details id="spec-6">
         <summary>タスク削除 <span>草案（最終レビュー待ち） · 実装済み</span></summary>
         <div class="content">
           <h2>タスク削除</h2>
@@ -665,7 +736,7 @@
           <p>なし。仕様全体は人による最終レビュー待ち。</p>
         </div>
       </details>
-      <details id="spec-6">
+      <details id="spec-7">
         <summary>MySQLへの変更 <span>草案 · 実装済み</span></summary>
         <div class="content">
           <h2>SQLite から Docker MySQL への変更</h2>
@@ -706,7 +777,7 @@
           </p>
         </div>
       </details>
-      <details id="spec-7">
+      <details id="spec-8">
         <summary>期限の追加 <span>過去の試行用課題 · 未実装</span></summary>
         <div class="content">
           <h2>課題: タスクに期限を追加する</h2>
@@ -744,7 +815,7 @@
           <p>この課題のコードをコミットしないでください。評価用資産を探さないでください。</p>
         </div>
       </details>
-      <details id="spec-8">
+      <details id="spec-9">
         <summary>期限設定（現行ベースライン） <span>確定 · 実装済み</span></summary>
         <div class="content">
           <h2>タスクの期限設定</h2>
@@ -836,7 +907,7 @@
           </ul>
         </div>
       </details>
-      <details id="spec-9">
+      <details id="spec-10">
         <summary>レビュー用HTMLの汎用化 <span>確定 · 実装済み</span></summary>
         <div class="content">
           <h2>レビュー用HTMLの汎用化</h2>
@@ -945,6 +1016,21 @@
             検索の単体テスト: <a href="../tests/unit/search.test.ts">tests/unit/search.test.ts</a>
           </li>
           <li><code>%s</code> を含む名前は複数の入力で実行されるテストです。</li>
+        </ul>
+        <h3><a href="due-date-sort.md">期限順の並び替え</a></h3>
+        <ul>
+          <li>
+            CHECK-01、CHECK-02: 画面
+            <code>期限順を選ぶと期限が近い順で未設定は最後になり登録順に戻せる</code>。
+          </li>
+          <li>
+            CHECK-03: 画面
+            <code>期限順でステータスを絞り込むと一致するタスクだけが期限順に並ぶ</code>。
+          </li>
+          <li>
+            期限編集の反映: 画面
+            <code>期限順で期限を変更して保存すると一覧が新しい期限順に並ぶ</code>。
+          </li>
         </ul>
         <h3><a href="task-completion.md">タスクの完了</a></h3>
         <div class="table">
