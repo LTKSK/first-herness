@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { format } from "oxfmt";
 
 const entries = [
-  ["due-date-sort.md", "期限順の並び替え", "実装先行", "候補"],
+  ["due-date-sort.md", "期限順の並び替え", "確定", "実装済み"],
   ["mutation-testing.md", "StrykerJSを使ったテストの評価", "確定", "実装済み"],
   ["task-list-usability.md", "タスク一覧の見た目と操作", "確定", "実装済み"],
   ["task-completion.md", "タスクの完了", "確定", "実装済み"],
