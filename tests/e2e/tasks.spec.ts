@@ -494,8 +494,7 @@ test("検索中にタイトルを変更して一覧から消すと検索欄に�
   await expect(page.getByLabel("タイトルを検索")).toBeFocused();
 });
 
-test("期限順を選ぶと期限が近い順で未設定は最後になり登録順に戻せる", async ({ page }) => {
-  await page.goto("/");
+async function addSortFixtures(page: import("@playwright/test").Page) {
   const prefix = `sort ${Date.now()}`;
   for (const [name, date] of [
     ["なし", ""],
@@ -507,32 +506,54 @@ test("期限順を選ぶと期限が近い順で未設定は最後になり登�
     await addTask(page, `${prefix} ${name}`);
   }
   await page.getByLabel("タイトルを検索").fill(prefix);
-  const titles = page.locator(".task-title");
-  await expect(titles).toHaveText([
+  return prefix;
+}
+
+test("期限順に切り替える前はタスクを登録順で表示する", async ({ page }) => {
+  await page.goto("/");
+  const prefix = await addSortFixtures(page);
+  await expect(page.getByLabel("並び順")).toHaveValue("registered");
+  await expect(page.locator(".task-title")).toHaveText([
     `${prefix} なし`,
     `${prefix} 遅い`,
     `${prefix} 同日1`,
     `${prefix} 同日2`,
   ]);
+});
+
+test("期限順を選ぶと近い期限から表示し同じ期限は登録順、未設定は最後になる", async ({ page }) => {
+  await page.goto("/");
+  const prefix = await addSortFixtures(page);
   await page.getByLabel("並び順").selectOption("due");
-  await expect(titles).toHaveText([
+  await expect(page.locator(".task-title")).toHaveText([
     `${prefix} 同日1`,
     `${prefix} 同日2`,
     `${prefix} 遅い`,
     `${prefix} なし`,
   ]);
+});
+
+test("期限順から登録順を選ぶとタスクを登録した順に表示する", async ({ page }) => {
+  await page.goto("/");
+  const prefix = await addSortFixtures(page);
+  await page.getByLabel("並び順").selectOption("due");
   await page.getByLabel("並び順").selectOption("registered");
-  await expect(titles).toHaveText([
+  await expect(page.locator(".task-title")).toHaveText([
     `${prefix} なし`,
     `${prefix} 遅い`,
     `${prefix} 同日1`,
     `${prefix} 同日2`,
   ]);
+});
+
+test("期限順を選んで再読み込みすると並び順が登録順に戻る", async ({ page }) => {
+  await page.goto("/");
+  const prefix = await addSortFixtures(page);
   await page.getByLabel("並び順").selectOption("due");
   await page.reload();
   await expect(page.getByLabel("並び順")).toHaveValue("registered");
   await page.getByLabel("タイトルを検索").fill(prefix);
-  await expect(titles).toHaveText([
+  await expect(page.locator(".task-title")).toHaveText([
     `${prefix} なし`,
     `${prefix} 遅い`,
     `${prefix} 同日1`,
@@ -578,4 +599,35 @@ test("期限順で期限を変更して保存すると一覧が新しい期限�
   await page.getByLabel("期限を編集").fill("2028-01-01");
   await page.getByRole("button", { name: "保存" }).click();
   await expect(page.locator(".task-title")).toHaveText([`${prefix} 後`, `${prefix} 先`]);
+});
+
+test("近い期限から登録した2件を期限順で表示すると登録順を維持する", async ({ page, request }) => {
+  const prefix = `ascending-probe-${Date.now()}`;
+  for (const [label, dueDate] of [
+    ["近い", "2029-01-01"],
+    ["遠い", "2030-01-01"],
+  ]) {
+    const response = await request.post("/api/tasks", {
+      data: { title: `${prefix} ${label}`, dueDate },
+    });
+    expect(response.ok()).toBe(true);
+  }
+  await page.goto("/");
+  await page.getByLabel("タイトルを検索").fill(prefix);
+  await page.getByLabel("並び順").selectOption("due");
+  await expect(page.locator(".task-title")).toHaveText([`${prefix} 近い`, `${prefix} 遠い`]);
+});
+
+test("期限未設定の2件を期限順で表示すると登録順を維持する", async ({ page, request }) => {
+  const prefix = `null-probe-${Date.now()}`;
+  for (const label of ["先", "後"]) {
+    const response = await request.post("/api/tasks", {
+      data: { title: `${prefix} ${label}`, dueDate: null },
+    });
+    expect(response.ok()).toBe(true);
+  }
+  await page.goto("/");
+  await page.getByLabel("タイトルを検索").fill(prefix);
+  await page.getByLabel("並び順").selectOption("due");
+  await expect(page.locator(".task-title")).toHaveText([`${prefix} 先`, `${prefix} 後`]);
 });
